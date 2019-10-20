@@ -1165,14 +1165,24 @@ void gen_test_pdf(){
 	Variable K892pMass("K892p_mass", 0.89176);
 	Variable K892pWidth("K892p_width", 0.0503);
 	ResonancePdf *K892p = new Resonances::RBW(
-		"K892p", Variable("K892p_amp_real", 1), Variable("K892p_amp_imag", 0), K892pMass, K892pWidth, 1, PAIR_12);
-	
+		"K892p", 
+		Variable("K892p_amp_real", 1), 
+		Variable("K892p_amp_imag", 0), 
+//		Variable("K892p_amp_real", -0.4871474223254), 
+//		Variable("K892p_amp_imag", 0.001120132013781), 
+		K892pMass, 
+		K892pWidth, 
+		1, 
+		PAIR_12);
+
 	Variable K892zeroMass("K892zero_mass", 0.89555);
 	Variable K892zeroWidth("K892zero_width", 0.0473);
 	ResonancePdf *K892zero = new Resonances::RBW(
 		"K892zero",
-		Variable("K892zero_amp_real", -0.4871474953126),
-		Variable("K892zero_amp_imag", 0.001120166841566),
+		Variable("K892zero_amp_real", -0.4871474223254),
+		Variable("K892zero_amp_imag", 0.001120132013781),
+//		Variable("K892zero_amp_real", 1),
+//		Variable("K892zero_amp_imag", 0),
 		K892zeroMass,
 		K892zeroWidth,
 		1,
@@ -1214,13 +1224,27 @@ void gen_test_pdf(){
 	}
 
 	//for out put hist
-	m12_sigpdf.Scale(200000/m12_sigpdf.Integral());
-	m13_sigpdf.Scale(200000/m13_sigpdf.Integral());
-	m23_sigpdf.Scale(200000/m23_sigpdf.Integral());
+//	m12_sigpdf.Scale(200000/m12_sigpdf.Integral());
+//	m13_sigpdf.Scale(200000/m13_sigpdf.Integral());
+//	m23_sigpdf.Scale(200000/m23_sigpdf.Integral());
 
-	m12_sigpdf.SaveAs("plots/m12_testpdf.root");
-	m13_sigpdf.SaveAs("plots/m13_testpdf.root");
-	m23_sigpdf.SaveAs("plots/m23_testpdf.root");
+	TCanvas *foo = new TCanvas("c1","c1",1200,350);
+	foo->Divide(3,1);
+
+	foo->cd(1);
+	m12_sigpdf.Draw("");
+
+	foo->cd(2);
+	m13_sigpdf.Draw("");
+
+	foo->cd(3);
+	m23_sigpdf.Draw("");
+
+	foo->SaveAs("plots/test_pdf_plot.C");
+
+//	m12_sigpdf.SaveAs("plots/m12_testpdf.root");
+//	m13_sigpdf.SaveAs("plots/m13_testpdf.root");
+//	m23_sigpdf.SaveAs("plots/m23_testpdf.root");
 }
 
 int main(int argc, char **argv) {
