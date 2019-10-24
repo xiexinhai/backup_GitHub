@@ -1168,8 +1168,6 @@ void gen_test_pdf(){
 		"K892p", 
 		Variable("K892p_amp_real", 1), 
 		Variable("K892p_amp_imag", 0), 
-//		Variable("K892p_amp_real", -0.4871474223254), 
-//		Variable("K892p_amp_imag", 0.001120132013781), 
 		K892pMass, 
 		K892pWidth, 
 		1, 
@@ -1181,15 +1179,61 @@ void gen_test_pdf(){
 		"K892zero",
 		Variable("K892zero_amp_real", -0.4871474223254),
 		Variable("K892zero_amp_imag", 0.001120132013781),
-//		Variable("K892zero_amp_real", 1),
-//		Variable("K892zero_amp_imag", 0),
 		K892zeroMass,
 		K892zeroWidth,
 		1,
 		PAIR_13);
 
+	Variable K1410zeroMass("K1410zero_mass", 1.421);
+	Variable K1410zeroWidth("K1410zero_width", 0.236);
+	ResonancePdf *K1410zero = new Resonances::RBW(
+		"K1410zero",
+		Variable("K1410zero_amp_real", -1.676234687673),
+		Variable("K1410zero_amp_imag", 1.25884833851),
+		K1410zeroMass,
+		K1410zeroWidth,
+		1,
+		PAIR_13);
+
+	Variable a1450pMass("a1450p_Mass", 1.474);
+	Variable a1450pWidth("a1450p_Width", 0.265);
+	ResonancePdf *a1450p = new Resonances::RBW(
+		"a1450p",
+		Variable("a1450p_amp_real", -1.167432844979),
+		Variable("a1450p_amp_imag", 0.2174462280103),
+		a1450pMass,
+		a1450pWidth,
+		0,
+		PAIR_23);
+
+	Variable SwaveKppi0Mass("SwaveKppi0_Mass", 1.425);
+	Variable SwaveKppi0Width("SwaveKppi0_Width", 0.27);
+	ResonancePdf *SwaveKppi0 = new Resonances::LASS(
+		"SwaveKppi0",
+		Variable("SwaveKppi0_amp_real", 5.251775650343),
+		Variable("SwaveKppi0_amp_imag", 0.4439884037173),
+		SwaveKppi0Mass,
+		SwaveKppi0Width,
+		0,
+		PAIR_12);
+
+	Variable SwaveKspi0Mass("SwaveKspi0_Mass", 1.425);
+	Variable SwaveKspi0Width("SwaveKspi0_Width", 0.27);
+	ResonancePdf *SwaveKspi0 = new Resonances::LASS(
+		"SwaveKspi0",
+		Variable("SwaveKspi0_amp_real", 0.5333076345728),
+		Variable("SwaveKspi0_amp_imag", -1.568683551211),
+		SwaveKspi0Mass,
+		SwaveKspi0Width,
+		0,
+		PAIR_13);
+
 	dtop0pp.resonances.push_back(K892p);
 	dtop0pp.resonances.push_back(K892zero);
+	dtop0pp.resonances.push_back(K1410zero);
+	dtop0pp.resonances.push_back(a1450p);
+	dtop0pp.resonances.push_back(SwaveKppi0);
+	dtop0pp.resonances.push_back(SwaveKspi0);
 
 	vector<Variable> offsets;
 	vector<Observable> observables;
@@ -1252,6 +1296,8 @@ int main(int argc, char **argv) {
 	srand((unsigned)time(NULL));
 	int seed = 2333333*(double)rand()/((double)RAND_MAX);
 	rnd.SetSeed(seed);
+
+//	gen_test_pdf();
 
 	std::string filename = "data_tagAll.root";
 	app.add_option("-f,--filename,filename", filename, "File to read in", true)->check(GooFit::ExistingFile);
