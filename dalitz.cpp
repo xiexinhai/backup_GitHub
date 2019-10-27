@@ -63,11 +63,17 @@ const fptype m23_lower = (KsMass+KpMass)*(KsMass+KpMass);
 const fptype m23_upper = (_mDp-pi0Mass)*(_mDp-pi0Mass);
 
 bool m_draw_data = false;
-bool m_effPoly = false;
+bool m_effPoly = true;
+
 bool m_float_init = false;
+bool m_float_polyeff = false;
+
+bool m_draw_polyeff = true;
+bool m_draw_smootheff = false;
 
 TRandom3 rnd;
 
+void makeEffPlot(GooPdf* total, UnbinnedDataSet* data);
 // Constants used in more than one PDF component.
 Variable motherM("motherM", _mDp);
 Variable chargeM("chargeM", KpMass);
@@ -471,14 +477,13 @@ GooPdf* makeHistogramPdf(UnbinnedDataSet &data, string filename = "", string his
 
 	f->Close();
  	cout << "end generate efficiency pdf" << endl;
+	if(m_draw_smootheff)
+		makeEffPlot(ret,&data);
+
 	return ret; 
 }
 
-GooPdf* makeEfficiencyPoly (Observable m12, Observable m13) {
-//	auto obs               = data.getObservables();
-//	Observable m12         = obs.at(0);
-//	Observable m13         = obs.at(1);
-
+GooPdf* makeEfficiencyPoly (Observable m12, Observable m13, vector <fptype> init_val) {
 	vector<Variable> offsets;
 	offsets.clear();
 	offsets.push_back(constantOne);
@@ -523,65 +528,78 @@ GooPdf* makeEfficiencyPoly (Observable m12, Observable m13) {
 
 	Variable x0y0("x0y0",1);
 	coefficients.push_back(x0y0);
-	Variable x1y0("x1y0", 0.02486521119719, 0.01, -1, 1);
+	Variable x1y0("x1y0", init_val[0], 0.01, -1, 1);
 	coefficients.push_back(x1y0);
-	Variable x2y0("x2y0", 0.1230872905859, 0.01, -1, 1);
+	Variable x2y0("x2y0", init_val[1], 0.01, -1, 1);
 	coefficients.push_back(x2y0);
-	Variable x3y0("x3y0", -0.4004961083011, 0.01, -1, 1);
+	Variable x3y0("x3y0", init_val[2], 0.01, -1, 1);
 	coefficients.push_back(x3y0);
-	Variable x0y1("x0y1", 0.06910392672422, 0.01, -1, 1);
+	Variable x0y1("x0y1", init_val[3], 0.01, -1, 1);
 	coefficients.push_back(x0y1);
-	Variable x1y1("x1y1", -0.01732613891182, 0.01, -1, 1);
+	Variable x1y1("x1y1", init_val[4], 0.01, -1, 1);
 	coefficients.push_back(x1y1);
-	Variable x2y1("x2y1", -0.02334414112849, 0.01, -1, 1);
+	Variable x2y1("x2y1", init_val[5], 0.01, -1, 1);
 	coefficients.push_back(x2y1);
-	Variable x0y2("x0y2", -0.1921759479967, 0.01, -1, 1);
+	Variable x0y2("x0y2", init_val[6], 0.01, -1, 1);
 	coefficients.push_back(x0y2);
-	Variable x1y2("x1y2", 0.01745157637595, 0.01, -1, 1);
+	Variable x1y2("x1y2", init_val[7], 0.01, -1, 1);
 	coefficients.push_back(x1y2);
-	Variable x0y3("x0y3", -0.2572751691495, 0.01, -1, 1);
+	Variable x0y3("x0y3", init_val[8], 0.01, -1, 1);
 	coefficients.push_back(x0y3);
 
 	PolynomialPdf* poly = new PolynomialPdf("efficiency", observables, coefficients, offsets, 3);
 //	poly->setParameterConstantness(true); 
 
-//	Variable* decXmin = new Variable("decXmin", 6.22596, 0.001, 0, 50);
-//	Variable* decYmin = new Variable("decYmin", 6.30722);
-//	Variable* decZmin = new Variable("decZmin",10.82390, 0.001, 0, 50);
-//	Variable* conXmin = new Variable("conXmin", 0.65621, 0.001, 0, 1);
-//	Variable* conYmin = new Variable("conYmin", 0.69527);
-//	Variable* conZmin = new Variable("conZmin", 0.31764, 0.001, 0, 1);
-	Variable decXmax("decXmax", 0.79181, 0.001, 0, 5);
-	Variable decYmax("decYmax", 0.79181, 0.001, 0, 5);
+	Variable decXmax("decXmax", init_val[9], 0.001, 0, 5);
+	Variable conXmax("conXmax", init_val[10], 0.001, 0, 1);
+
+	Variable decYmax("decYmax", init_val[11], 0.001, 0, 5);
+	Variable conYmax("conYmax", init_val[12]);//, 0.001, 0, 1);
+
 	Variable decZmax("decZmax", 1.52031, 0.001, 0, 5);
-	Variable conXmax("conXmax", 0.80918, 0.001, 0, 1);
-	Variable conYmax("conYmax", 0);
 	Variable conZmax("conZmax", 0.41866, 0.001, 0, 1);
 	
-//	TrigThresholdPdf* loX = new TrigThresholdPdf("loX", m12, minDalitzX, decXmin, conXmin, false);
 	Variable maxDalitzX("maxDalitzX", pow(_mDp - KsMass, 2));
 	TrigThresholdPdf* hiX = new TrigThresholdPdf("hiX", m12, maxDalitzX, decXmax, conXmax, true); 
 	
-//	TrigThresholdPdf* loY = new TrigThresholdPdf("loY", m13, minDalitzX, decXmin, conXmin, false);
 	Variable maxDalitzY("maxDalitzY", pow(_mDp - KpMass, 2));
 	TrigThresholdPdf* hiY = new TrigThresholdPdf("hiY", m13, maxDalitzY, decYmax, conYmax, true); 
 
+//	Variable maxDalitzZ("maxDalitzZ", pow(_mDp - pi0Mass, 2));
+//	TrigThresholdPdf* hiZ = new TrigThresholdPdf("hiZ", m12, m13, maxDalitzZ, decZmax, conZmax, massSum, true); 
+
+	Variable decXmin("decXmin", 6.22596, 0.001, 0, 50);
+	Variable conXmin("conXmin", 0.65621, 0.001, 0, 1);
+
+	Variable decYmin("decYmin", 6.30722, 0.001, 0, 50);
+	Variable conYmin("conYmin", 0.69527, 0.001, 0, 1);
+
+	Variable minDalitzX("minDalitzX", pow(KpMass + pi0Mass, 2));
+	TrigThresholdPdf* loX = new TrigThresholdPdf("loX", m12, minDalitzX, decXmin, conXmin, false);
+
+	Variable minDalitzY("minDalitzY", pow(KsMass + pi0Mass, 2));
+	TrigThresholdPdf* loY = new TrigThresholdPdf("loY", m13, minDalitzY, decXmin, conXmin, false);
+
+//	Variable* decZmin = new Variable("decZmin",10.82390, 0.001, 0, 50);
+
+//	Variable* conZmin = new Variable("conZmin", 0.31764, 0.001, 0, 1);
+
+
 //	TrigThresholdPdf* loZ = new TrigThresholdPdf("loZ", m12, m13, minDalitzX, decZmin, conZmin, massSum, false);
-	Variable maxDalitzZ("maxDalitzZ", pow(_mDp - pi0Mass, 2));
-	TrigThresholdPdf* hiZ = new TrigThresholdPdf("hiZ", m12, m13, maxDalitzZ, decZmax, conZmax, massSum, true); 
 
 	vector<PdfBase*> comps;
 	comps.clear();
 	comps.push_back(poly);
-//	comps.push_back(loX);
 	comps.push_back(hiX);
-//	comps.push_back(loY);
 	comps.push_back(hiY);
-//	comps.push_back(loZ);
 //	comps.push_back(hiZ);
+
+//	comps.push_back(loX);
+//	comps.push_back(loY);
+
+//	comps.push_back(loZ);
 	comps.push_back(getDPVeto(m12,m13)); 
 	ProdPdf* ret = new ProdPdf("efficiency_total", comps); 
-//	return poly;
 	return ret; 
 }
 
@@ -615,7 +633,7 @@ UnbinnedDataSet *loadEffData(UnbinnedDataSet &data,std::string toyFileName = "ef
 	return effdata; 
 }
 
-void makeEffFitPlot(GooPdf* total, UnbinnedDataSet* data){
+void makeEffPlot(GooPdf* total, UnbinnedDataSet* data){
 	auto obs               = data->getObservables();
 	Observable m12         = obs.at(0);
 	Observable m13         = obs.at(1);
@@ -805,14 +823,20 @@ void makeEffFitPlot(GooPdf* total, UnbinnedDataSet* data){
 	cout << "chi2 = " << Chi2 << endl;
 	pull->Draw("colz");
 	foo2->Update();
-	foo2->SaveAs("plots/eff_pull.C");
 
 	foo->cd(1);
 	effplot->Draw("colz");
 
 	foo->cd(2);
 	effpdfplot->Draw("colz");
-	foo->SaveAs("plots/eff_fit_plot.C");
+	if(m_draw_polyeff){
+		foo2->SaveAs("plots/eff_pull.C");
+		foo->SaveAs("plots/eff_fit_plot.C");
+	}
+	if(m_draw_smootheff){
+		foo2->SaveAs("plots/smootheff_pull.C");
+		foo->SaveAs("plots/smootheff_plot.C");
+	}
 }
 
 GooPdf* fitEffPoly(UnbinnedDataSet &data){
@@ -824,15 +848,55 @@ GooPdf* fitEffPoly(UnbinnedDataSet &data){
 //	Observable m12("m12",pow(pi0Mass+KpMass,2),pow(_mDp-KsMass,2));
 //	Observable m13("m13",pow(pi0Mass+KsMass,2),pow(_mDp-KpMass,2));
 
-	GooPdf* eff = makeEfficiencyPoly(m12,m13);
+	GooPdf* eff = NULL;
 	UnbinnedDataSet *effdata = loadEffData(data,"efficiency_acceptance.root");
+	vector <fptype> init_val;
+
+	if(m_float_polyeff){
+		init_val.clear();
+		for (int j = 0; j < 9; ++j)
+			init_val.push_back(fRand(-1,1));
+		init_val.push_back(fRand(0,5));
+		init_val.push_back(fRand(0,1));
+		init_val.push_back(fRand(0,5));
+		init_val.push_back(fRand(0,1));
+		
+	}
+	else{
+		init_val.clear();
+		init_val.push_back(-0.09619442260917);
+		init_val.push_back(0.1050472227158);
+		init_val.push_back(0.0879306537382);
+		init_val.push_back(0.05862313927887);
+		init_val.push_back(0.02635542505541);
+		init_val.push_back(0.0859644179791);
+		init_val.push_back(-0.2162739116849);
+		init_val.push_back(0.08941190852959);
+		init_val.push_back(-0.2544651299809);
+
+		init_val.push_back(1.809830652448);
+		init_val.push_back(0.6856680565195);
+		init_val.push_back(2.294445970101);
+		init_val.push_back(0);
+	}
+	eff = makeEfficiencyPoly(m12,m13,init_val);
 	eff->setData(effdata);
 //	eff->setDataSize(effdata->getNumEvents());
 
 	FitManager effpdf(eff);
 	effpdf.fit();
+	fptype nll = eff->calculateNLL();
+
 	eff->setParameterConstantness(true);
-	makeEffFitPlot(eff,effdata);
+
+	cout << "init values: " ;
+	for (int k = 0; k < init_val.size(); ++k)
+		cout << init_val[k] << "      ";
+	cout << endl;
+	cout << "NLL = " << endl << nll << endl;
+
+	if(m_draw_polyeff)
+		makeEffPlot(eff,effdata);
 	return eff;
 }
 
@@ -1168,6 +1232,8 @@ void gen_test_pdf(){
 		"K892p", 
 		Variable("K892p_amp_real", 1), 
 		Variable("K892p_amp_imag", 0), 
+//		Variable("K892p_amp_real", -0.4871474223254), 
+//		Variable("K892p_amp_imag", 0.001120132013781), 
 		K892pMass, 
 		K892pWidth, 
 		1, 
@@ -1179,61 +1245,15 @@ void gen_test_pdf(){
 		"K892zero",
 		Variable("K892zero_amp_real", -0.4871474223254),
 		Variable("K892zero_amp_imag", 0.001120132013781),
+//		Variable("K892zero_amp_real", 1),
+//		Variable("K892zero_amp_imag", 0),
 		K892zeroMass,
 		K892zeroWidth,
 		1,
 		PAIR_13);
 
-	Variable K1410zeroMass("K1410zero_mass", 1.421);
-	Variable K1410zeroWidth("K1410zero_width", 0.236);
-	ResonancePdf *K1410zero = new Resonances::RBW(
-		"K1410zero",
-		Variable("K1410zero_amp_real", -1.676234687673),
-		Variable("K1410zero_amp_imag", 1.25884833851),
-		K1410zeroMass,
-		K1410zeroWidth,
-		1,
-		PAIR_13);
-
-	Variable a1450pMass("a1450p_Mass", 1.474);
-	Variable a1450pWidth("a1450p_Width", 0.265);
-	ResonancePdf *a1450p = new Resonances::RBW(
-		"a1450p",
-		Variable("a1450p_amp_real", -1.167432844979),
-		Variable("a1450p_amp_imag", 0.2174462280103),
-		a1450pMass,
-		a1450pWidth,
-		0,
-		PAIR_23);
-
-	Variable SwaveKppi0Mass("SwaveKppi0_Mass", 1.425);
-	Variable SwaveKppi0Width("SwaveKppi0_Width", 0.27);
-	ResonancePdf *SwaveKppi0 = new Resonances::LASS(
-		"SwaveKppi0",
-		Variable("SwaveKppi0_amp_real", 5.251775650343),
-		Variable("SwaveKppi0_amp_imag", 0.4439884037173),
-		SwaveKppi0Mass,
-		SwaveKppi0Width,
-		0,
-		PAIR_12);
-
-	Variable SwaveKspi0Mass("SwaveKspi0_Mass", 1.425);
-	Variable SwaveKspi0Width("SwaveKspi0_Width", 0.27);
-	ResonancePdf *SwaveKspi0 = new Resonances::LASS(
-		"SwaveKspi0",
-		Variable("SwaveKspi0_amp_real", 0.5333076345728),
-		Variable("SwaveKspi0_amp_imag", -1.568683551211),
-		SwaveKspi0Mass,
-		SwaveKspi0Width,
-		0,
-		PAIR_13);
-
 	dtop0pp.resonances.push_back(K892p);
 	dtop0pp.resonances.push_back(K892zero);
-	dtop0pp.resonances.push_back(K1410zero);
-	dtop0pp.resonances.push_back(a1450p);
-	dtop0pp.resonances.push_back(SwaveKppi0);
-	dtop0pp.resonances.push_back(SwaveKspi0);
 
 	vector<Variable> offsets;
 	vector<Observable> observables;
@@ -1285,10 +1305,6 @@ void gen_test_pdf(){
 	m23_sigpdf.Draw("");
 
 	foo->SaveAs("plots/test_pdf_plot.C");
-
-//	m12_sigpdf.SaveAs("plots/m12_testpdf.root");
-//	m13_sigpdf.SaveAs("plots/m13_testpdf.root");
-//	m23_sigpdf.SaveAs("plots/m23_testpdf.root");
 }
 
 int main(int argc, char **argv) {
@@ -1296,8 +1312,6 @@ int main(int argc, char **argv) {
 	srand((unsigned)time(NULL));
 	int seed = 2333333*(double)rand()/((double)RAND_MAX);
 	rnd.SetSeed(seed);
-
-//	gen_test_pdf();
 
 	std::string filename = "data_tagAll.root";
 	app.add_option("-f,--filename,filename", filename, "File to read in", true)->check(GooFit::ExistingFile);
@@ -1310,8 +1324,6 @@ int main(int argc, char **argv) {
     // Observables setup
 	Observable m12("m12", 0.3, 2);
 	Observable m13("m13", 0.3, 2);
-//	Observable m12("m12", m12_lower, m12_upper);
-//	Observable m13("m13", m13_lower, m13_upper);
 
 	EventNumber eventNumber("eventNumber");
 	m12.setNumBins(BinNumsM12);
@@ -1348,26 +1360,32 @@ int main(int argc, char **argv) {
 	else{
 		//init value with min nll
 		init_val.clear();
-//		init_val.push_back(-0.1567797457968);
-//		init_val.push_back(-0.6643757929923);
-//		init_val.push_back(1.247019161278);
-//		init_val.push_back(0.4485037457222);
-//		init_val.push_back(-1.040390496645);
-//		init_val.push_back(1.452633172177);
-//		init_val.push_back(1.869766722451);
-//		init_val.push_back(0.2627024419883);
-//		init_val.push_back(-2.61211862654);
-//		init_val.push_back(-0.126787313811);
-		init_val.push_back(-0.4871474953126);
-		init_val.push_back(0.001120166841566);
-		init_val.push_back(-1.676234590844);
-		init_val.push_back(1.258848242572);
-		init_val.push_back(-1.167432382186);
-		init_val.push_back(0.2174461981026);
-		init_val.push_back(5.251776861255);
-		init_val.push_back(0.4439887755764);
-		init_val.push_back(0.5333087459871);
-		init_val.push_back(-1.568682267362);
+		if (!m_effPoly){
+			//for smooth eff
+			init_val.push_back(-0.4871474953126);
+			init_val.push_back(0.001120166841566);
+			init_val.push_back(-1.676234590844);
+			init_val.push_back(1.258848242572);
+			init_val.push_back(-1.167432382186);
+			init_val.push_back(0.2174461981026);
+			init_val.push_back(5.251776861255);
+			init_val.push_back(0.4439887755764);
+			init_val.push_back(0.5333087459871);
+			init_val.push_back(-1.568682267362);
+		}
+		else{
+			//for poly eff
+			init_val.push_back(-0.2228764621018);
+			init_val.push_back(-0.5832810690462);
+			init_val.push_back(0.8823176264095);
+			init_val.push_back(1.637020214731);
+			init_val.push_back(-1.059158275127);
+			init_val.push_back(1.986955448399);
+			init_val.push_back(-0.8918729448466);
+			init_val.push_back(-1.194650555205);
+			init_val.push_back(-0.8159530063214);
+			init_val.push_back(2.625492017721);
+		}
 		Amp3Body *signal = makeSignalPdf(m12, m13, eventNumber, init_val, 0, eff, false);
 		runDataFit(signal, &data, true);
 	}
@@ -1386,7 +1404,6 @@ int main(int argc, char **argv) {
 //	Amp3Body *signal = makeSignalPdf(m12, m13, eventNumber, init_val, 0, eff, false);
 //	runDataFit(signal, &data, true);
 
-	gen_test_pdf();
-//	IO check
+//	gen_test_pdf();
 	return 1;
 }
