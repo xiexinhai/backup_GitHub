@@ -52,7 +52,6 @@ const fptype KpMass = 0.493677;
 const fptype pi0Mass = 0.134977;
 const int BinNumsM12 = 100;
 const int BinNumsM13 = 100;
-const int BinNumsM23 = 100;
 const fptype m12_lower = (KpMass+pi0Mass)*(KpMass+pi0Mass);
 const fptype m12_upper = (_mDp-KsMass)*(_mDp-KsMass);
 
@@ -62,14 +61,23 @@ const fptype m13_upper = (_mDp-KpMass)*(_mDp-KpMass);
 const fptype m23_lower = (KsMass+KpMass)*(KsMass+KpMass);
 const fptype m23_upper = (_mDp-pi0Mass)*(_mDp-pi0Mass);
 
-bool m_draw_data = false;
-bool m_effPoly = true;
+bool m_draw_data = true;
+bool m_effPoly = false;
 
 bool m_float_init = false;
 bool m_float_polyeff = false;
 
-bool m_draw_polyeff = true;
+bool m_draw_polyeff = false;
 bool m_draw_smootheff = false;
+
+bool m_test_pdf = false;
+bool m_fit_data = true;
+
+std::string eff_filename="efficiency_acceptance.root";
+//std::string eff_filename="efficiency_acceptance_bin50.root";
+
+//std::string data_filename = "data_tagAll.root";
+std::string data_filename = "check_IO.root";
 
 TRandom3 rnd;
 
@@ -450,11 +458,11 @@ GooPdf* makeHistogramPdf(UnbinnedDataSet &data, string filename = "", string his
 		if(i==Int_t(num*0.8)) cout<<"*******************************completed 80%"<<"**************************************"<<endl;
 		if(i==Int_t(num*0.9)) cout<<"*******************************completed 90%"<<"**************************************"<<endl;
 		if(i==Int_t(num*1-1)) cout<<"*******************************completed !!!"<<"**************************************"<<endl;
-		int ix = i/m13.getNumBins();
-		int iy = i%m13.getNumBins();
-		if (ix > iy){
-			int itt = iy; iy = ix; ix = itt;
-		}
+		int iy = i/m12.getNumBins();
+		int ix = i%m12.getNumBins();
+//		if (ix > iy){
+//			int itt = iy; iy = ix; ix = itt;
+//		}
 		double content = h2->GetBinContent(ix+1,iy+1);
 		binEffData->setBinContent(i, content);
 
@@ -463,6 +471,7 @@ GooPdf* makeHistogramPdf(UnbinnedDataSet &data, string filename = "", string his
 //			++tmp;
 //		}
 //		cout<<"Hist: "<<ix<<"     "<<iy<<"     "<<h2->GetBinContent(ix+1, iy+1)<<endl;
+
 	}
 //	cout << "total non-zero BinContent:" << tmp << endl;
 
@@ -471,7 +480,7 @@ GooPdf* makeHistogramPdf(UnbinnedDataSet &data, string filename = "", string his
 	cout << "begin generate SmoothHistogramPdf" << endl;
 
 //	SmoothHistogramPdf* ret = new SmoothHistogramPdf(pdfname.c_str(), binEffData, constantZero); 
-	SmoothHistogramPdf* ret = new SmoothHistogramPdf(pdfname.c_str(), binEffData, Variable("smoothConst", 0)); 
+	SmoothHistogramPdf* ret = new SmoothHistogramPdf(pdfname.c_str(), binEffData, Variable("smoothConst", 10000)); 
 
 	cout << "end generate SmoothHistogramPdf" << endl;
 
@@ -559,8 +568,8 @@ GooPdf* makeEfficiencyPoly (Observable m12, Observable m13, vector <fptype> init
 	Variable decYmax("decYmax", init_val[11], 0.001, 0, 5);
 	Variable conYmax("conYmax", init_val[12]);//, 0.001, 0, 1);
 
-	Variable decZmax("decZmax", 1.52031, 0.001, 0, 5);
-	Variable conZmax("conZmax", 0.41866, 0.001, 0, 1);
+//	Variable decZmax("decZmax", 1.52031, 0.001, 0, 5);
+//	Variable conZmax("conZmax", 0.41866, 0.001, 0, 1);
 	
 	Variable maxDalitzX("maxDalitzX", pow(_mDp - KsMass, 2));
 	TrigThresholdPdf* hiX = new TrigThresholdPdf("hiX", m12, maxDalitzX, decXmax, conXmax, true); 
@@ -571,17 +580,17 @@ GooPdf* makeEfficiencyPoly (Observable m12, Observable m13, vector <fptype> init
 //	Variable maxDalitzZ("maxDalitzZ", pow(_mDp - pi0Mass, 2));
 //	TrigThresholdPdf* hiZ = new TrigThresholdPdf("hiZ", m12, m13, maxDalitzZ, decZmax, conZmax, massSum, true); 
 
-	Variable decXmin("decXmin", 6.22596, 0.001, 0, 50);
-	Variable conXmin("conXmin", 0.65621, 0.001, 0, 1);
+//	Variable decXmin("decXmin", 6.22596, 0.001, 0, 50);
+//	Variable conXmin("conXmin", 0.65621, 0.001, 0, 1);
+//
+//	Variable decYmin("decYmin", 6.30722, 0.001, 0, 50);
+//	Variable conYmin("conYmin", 0.69527, 0.001, 0, 1);
 
-	Variable decYmin("decYmin", 6.30722, 0.001, 0, 50);
-	Variable conYmin("conYmin", 0.69527, 0.001, 0, 1);
-
-	Variable minDalitzX("minDalitzX", pow(KpMass + pi0Mass, 2));
-	TrigThresholdPdf* loX = new TrigThresholdPdf("loX", m12, minDalitzX, decXmin, conXmin, false);
-
-	Variable minDalitzY("minDalitzY", pow(KsMass + pi0Mass, 2));
-	TrigThresholdPdf* loY = new TrigThresholdPdf("loY", m13, minDalitzY, decXmin, conXmin, false);
+//	Variable minDalitzX("minDalitzX", pow(KpMass + pi0Mass, 2));
+//	TrigThresholdPdf* loX = new TrigThresholdPdf("loX", m12, minDalitzX, decXmin, conXmin, false);
+//
+//	Variable minDalitzY("minDalitzY", pow(KsMass + pi0Mass, 2));
+//	TrigThresholdPdf* loY = new TrigThresholdPdf("loY", m13, minDalitzY, decXmin, conXmin, false);
 
 //	Variable* decZmin = new Variable("decZmin",10.82390, 0.001, 0, 50);
 
@@ -606,7 +615,7 @@ GooPdf* makeEfficiencyPoly (Observable m12, Observable m13, vector <fptype> init
 	return ret; 
 }
 
-UnbinnedDataSet *loadEffData(UnbinnedDataSet &data,std::string toyFileName = "efficiency_acceptance.root") {
+UnbinnedDataSet *loadEffData(UnbinnedDataSet &data,std::string toyFileName) {
 	auto obs               = data.getObservables();
 	Observable m12         = obs.at(0);
 	Observable m13         = obs.at(1);
@@ -714,7 +723,7 @@ void makeEffPlot(GooPdf* total, UnbinnedDataSet* data){
 	m23_data->SetLineColor(1);
 
 
-	TChain *tr_data = new TChain("DTag");tr_data->Add("efficiency_acceptance.root");
+	TChain *tr_data = new TChain("DTag");tr_data->Add(eff_filename.c_str());
 	tr_data->Project("m12_data","m_Kppi0_sq");
 	tr_data->Project("m13_data","m_Kspi0_sq");
 	tr_data->Project("m23_data","m_KpKs_sq");
@@ -852,7 +861,7 @@ GooPdf* fitEffPoly(UnbinnedDataSet &data){
 //	Observable m13("m13",pow(pi0Mass+KsMass,2),pow(_mDp-KpMass,2));
 
 	GooPdf* eff = NULL;
-	UnbinnedDataSet *effdata = loadEffData(data,"efficiency_acceptance.root");
+	UnbinnedDataSet *effdata = loadEffData(data,eff_filename);
 	vector <fptype> init_val;
 
 	if(m_float_polyeff){
@@ -867,19 +876,19 @@ GooPdf* fitEffPoly(UnbinnedDataSet &data){
 	}
 	else{
 		init_val.clear();
-		init_val.push_back(-0.09619442260917);
-		init_val.push_back(0.1050472227158);
-		init_val.push_back(0.0879306537382);
-		init_val.push_back(0.05862313927887);
-		init_val.push_back(0.02635542505541);
-		init_val.push_back(0.0859644179791);
-		init_val.push_back(-0.2162739116849);
-		init_val.push_back(0.08941190852959);
-		init_val.push_back(-0.2544651299809);
+		init_val.push_back(-0.09201160902261);
+		init_val.push_back(0.1017075510754);
+		init_val.push_back(0.0335360301755);
+		init_val.push_back(0.06845059175308);
+		init_val.push_back(0.005738541267831);
+		init_val.push_back(-0.04352948903496);
+		init_val.push_back(-0.1927575000666);
+		init_val.push_back(0.09610356305183);
+		init_val.push_back(-0.2193814370246);
 
-		init_val.push_back(1.809830652448);
-		init_val.push_back(0.6856680565195);
-		init_val.push_back(2.294445970101);
+		init_val.push_back(2.048851224385);
+		init_val.push_back(0.6529763897349);
+		init_val.push_back(2.139468906369);
 		init_val.push_back(0);
 	}
 	eff = makeEfficiencyPoly(m12,m13,init_val);
@@ -1037,18 +1046,42 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err, bool fixA
 			dalitzplot->GetNbinsY(), dalitzplot->GetYaxis()->GetXmin(), dalitzplot->GetYaxis()->GetXmax());
 	
 	
-		if(!fixAmps){
-			TChain *tr_data = new TChain("DTag");tr_data->Add("data_tagAll.root");
-			TCut cut_mbc = "((m_recoil>1.8648)&&(m_recoil<1.8772))";
-			TCut cut_dE = "((dE_sig>-0.03)&&(dE_sig<0.02))";
-	
-			tr_data->Project("m12_data","m_Kppi0_sq",cut_mbc&&cut_dE);
-			tr_data->Project("m13_data","m_Kspi0_sq",cut_mbc&&cut_dE);
-			tr_data->Project("m23_data","m_KpKs_sq",cut_mbc&&cut_dE);
-	
-			tr_data->Draw("m_Kspi0_sq:m_Kppi0_sq>>dalitzData",cut_mbc&&cut_dE);
-			cout << dalitzData->GetEntries() << endl;
+//		TChain *tr_data = new TChain("DTag");tr_data->Add(data_filename.c_str());
+//		TCut cut_mbc = "((m_recoil>1.8648)&&(m_recoil<1.8772))";
+//		TCut cut_dE = "((dE_sig>-0.03)&&(dE_sig<0.02))";
+//		tr_data->Project("m12_data","m_Kppi0_sq",cut_mbc&&cut_dE);
+//		tr_data->Project("m13_data","m_Kspi0_sq",cut_mbc&&cut_dE);
+//		tr_data->Project("m23_data","m_KpKs_sq",cut_mbc&&cut_dE);
+//		tr_data->Draw("m_Kspi0_sq:m_Kppi0_sq>>dalitzData",cut_mbc&&cut_dE);
+//		cout << dalitzData->GetEntries() << endl;
+
+		TFile *f = TFile::Open(data_filename.c_str());
+		TTree *t = (TTree *)f->Get("DTag");
+		assert(t);
+		fptype m_Kppi0_sq, m_Kspi0_sq, m_KpKs_sq, m_recoil, dE_sig;
+		t->SetBranchAddress("m_Kppi0_sq",&m_Kppi0_sq);
+		t->SetBranchAddress("m_Kspi0_sq",&m_Kspi0_sq);
+		t->SetBranchAddress("m_KpKs_sq",&m_KpKs_sq);
+		t->SetBranchAddress("m_recoil",&m_recoil);
+		t->SetBranchAddress("dE_sig",&dE_sig);
+
+
+		for(int i = 0; i < t->GetEntries(); i++){
+			t->GetEvent(i);
+			if(m_recoil<1.8648||m_recoil>1.8772) continue;
+			if(dE_sig<-0.03||dE_sig>0.02) continue;
+			if(!cpuDalitz(m_Kppi0_sq,m_Kspi0_sq)) continue;
+			m12_data->Fill(m_Kppi0_sq);
+			m13_data->Fill(m_Kspi0_sq);
+			m23_data->Fill(m_KpKs_sq);
+			dalitzData->Fill(m_Kppi0_sq,m_Kspi0_sq);
 		}
+		f->Close();
+//		t->Project("m12_data","m_Kppi0_sq","isDalitz==1");
+//		t->Project("m13_data","m_Kspi0_sq","isDalitz==1");
+//		t->Project("m23_data","m_KpKs_sq","isDalitz==1");
+//		t->Draw("m_Kspi0_sq:m_Kppi0_sq>>dalitzData","isDalitz==1");
+
 	
 		TCanvas tmp("c2","c2",800,700);
 		tmp.Divide(2,2);
@@ -1235,10 +1268,22 @@ void gen_test_pdf(){
 		"K892p", 
 		Variable("K892p_amp_real", 1), 
 		Variable("K892p_amp_imag", 0), 
+//		Variable("K892p_amp_real", -0.4871474223254), 
+//		Variable("K892p_amp_imag", 0.001120132013781), 
 		K892pMass, 
 		K892pWidth, 
 		1, 
 		PAIR_12);
+
+	ResonancePdf *vr_res = new Resonances::RBW(
+		"virtual", 
+		Variable("virtual_amp_real", 1), 
+		Variable("birtaul_amp_imag", 0), 
+		Variable("virtual_mass", 1.2), 
+		Variable("virtual_width", 0.08), 
+		1, 
+		PAIR_12);
+
 
 	Variable K892zeroMass("K892zero_mass", 0.89555);
 	Variable K892zeroWidth("K892zero_width", 0.0473);
@@ -1246,9 +1291,11 @@ void gen_test_pdf(){
 		"K892zero",
 		Variable("K892zero_amp_real", -0.4871474223254),
 		Variable("K892zero_amp_imag", 0.001120132013781),
+//		Variable("K892zero_amp_real", 1),
+//		Variable("K892zero_amp_imag", 0.),
 		K892zeroMass,
 		K892zeroWidth,
-		1,
+		0,
 		PAIR_13);
 
      Variable K1410zeroMass("K1410zero_mass", 1.421);
@@ -1297,11 +1344,12 @@ void gen_test_pdf(){
 
 
 	dtop0pp.resonances.push_back(K892p);
-	dtop0pp.resonances.push_back(K892zero);
-     dtop0pp.resonances.push_back(K1410zero);
-     dtop0pp.resonances.push_back(a1450p);
-     dtop0pp.resonances.push_back(SwaveKppi0);
-     dtop0pp.resonances.push_back(SwaveKspi0);
+//	dtop0pp.resonances.push_back(vr_res);
+//	dtop0pp.resonances.push_back(K892zero);
+	dtop0pp.resonances.push_back(K1410zero);
+//	dtop0pp.resonances.push_back(a1450p);
+//	dtop0pp.resonances.push_back(SwaveKppi0);
+//	dtop0pp.resonances.push_back(SwaveKspi0);
 
 	vector<Variable> offsets;
 	vector<Observable> observables;
@@ -1344,13 +1392,13 @@ void gen_test_pdf(){
 	foo->Divide(3,1);
 
 	foo->cd(1);
-	m12_sigpdf.Draw("");
+	m12_sigpdf.Draw("H");
 
 	foo->cd(2);
-	m13_sigpdf.Draw("");
+	m13_sigpdf.Draw("H");
 
 	foo->cd(3);
-	m23_sigpdf.Draw("");
+	m23_sigpdf.Draw("H");
 
 	foo->SaveAs("plots/test_pdf_plot.C");
 }
@@ -1361,15 +1409,14 @@ int main(int argc, char **argv) {
 	int seed = 2333333*(double)rand()/((double)RAND_MAX);
 	rnd.SetSeed(seed);
 
-	std::string filename = "data_tagAll.root";
-	app.add_option("-f,--filename,filename", filename, "File to read in", true)->check(GooFit::ExistingFile);
+//	std::string filename = "data_tagAll.root";
+	app.add_option("-f,--filename,filename", data_filename, "File to read in", true)->check(GooFit::ExistingFile);
 
 	GOOFIT_PARSE(app);
 
 	GooFit::setROOTStyle();
 
-
-    // Observables setup
+	//Observables setup
 	Observable m12("m12", 0.3, 2);
 	Observable m13("m13", 0.3, 2);
 
@@ -1377,18 +1424,20 @@ int main(int argc, char **argv) {
 	m12.setNumBins(BinNumsM12);
 	m13.setNumBins(BinNumsM13);
 
-	// Prepare the data
+	//Prepare the data
 	UnbinnedDataSet data({m12, m13, eventNumber});
 
-//	Set up efficiency pdf
+	//Set up efficiency pdf
 	GooPdf* eff = NULL;
 	if(!m_effPoly)
-		eff = makeHistogramPdf(data, "efficiency_acceptance.root", "th2d_dalitz", "efficiency");
+		eff = makeHistogramPdf(data, eff_filename, "th2d_dalitz", "efficiency");
 	else
 		eff = fitEffPoly(data);
 
-//	Read in data
-	getRealData(filename, app, data);
+if(m_fit_data){
+
+	//Read in data
+	getRealData(data_filename, app, data);
 
 	//floating initial values
 	vector <fptype> init_val;
@@ -1409,20 +1458,33 @@ int main(int argc, char **argv) {
 		//init value with min nll
 		init_val.clear();
 		if (!m_effPoly){
-			//for smooth eff
-			init_val.push_back(-0.4871474953126);
-			init_val.push_back(0.001120166841566);
-			init_val.push_back(-1.676234590844);
-			init_val.push_back(1.258848242572);
-			init_val.push_back(-1.167432382186);
-			init_val.push_back(0.2174461981026);
-			init_val.push_back(5.251776861255);
-			init_val.push_back(0.4439887755764);
-			init_val.push_back(0.5333087459871);
-			init_val.push_back(-1.568682267362);
+			//for smooth eff // data
+			init_val.push_back(-0.2812454088012);
+			init_val.push_back(0.2397007093189);
+			init_val.push_back(-1.641655024452);
+			init_val.push_back(1.115532804781);
+			init_val.push_back(-0.6448247924647);
+			init_val.push_back(0.4703435644124);
+			init_val.push_back(3.751568320127);
+			init_val.push_back(-0.6332930540448);
+			init_val.push_back(0.5665004208395);
+			init_val.push_back(-1.264412082648);
+
+			//for smooth eff // IO check
+//			init_val.push_back(-0.249478426886);
+//			init_val.push_back(-0.5757343593398);
+//			init_val.push_back(0.9852732038613);
+//			init_val.push_back(1.59076489141);
+//			init_val.push_back(-0.960467580812);
+//			init_val.push_back(2.119866925649);
+//			init_val.push_back(-1.040647152845);
+//			init_val.push_back(-1.192725433531);
+//			init_val.push_back(-0.7938823596397);
+//			init_val.push_back(2.620252723337);
+
 		}
 		else{
-			//for poly eff
+			//for poly eff // data
 			init_val.push_back(-0.2228764621018);
 			init_val.push_back(-0.5832810690462);
 			init_val.push_back(0.8823176264095);
@@ -1433,11 +1495,23 @@ int main(int argc, char **argv) {
 			init_val.push_back(-1.194650555205);
 			init_val.push_back(-0.8159530063214);
 			init_val.push_back(2.625492017721);
+
+			//for poly eff // MC
+//			init_val.push_back(-0.2975142854568);
+//			init_val.push_back(-0.6277874717491);
+//			init_val.push_back(0.6793008154279);
+//			init_val.push_back(2.000863745694);
+//			init_val.push_back(-1.050730354501);
+//			init_val.push_back(2.329015298883);
+//			init_val.push_back(-0.8597034302501);
+//			init_val.push_back(-1.577886799133);
+//			init_val.push_back(-1.732354196769);
+//			init_val.push_back(2.915962244536);
 		}
 		Amp3Body *signal = makeSignalPdf(m12, m13, eventNumber, init_val, 0, eff, false);
 		runDataFit(signal, &data, true);
 	}
-
+}
 //	init_val.clear();
 //	init_val.push_back(-0.1567496650418);
 //	init_val.push_back(-0.6644198096373);
@@ -1451,7 +1525,7 @@ int main(int argc, char **argv) {
 //	init_val.push_back(-0.126650709178);
 //	Amp3Body *signal = makeSignalPdf(m12, m13, eventNumber, init_val, 0, eff, false);
 //	runDataFit(signal, &data, true);
-
-	gen_test_pdf();
+	if(m_test_pdf)
+		gen_test_pdf();
 	return 1;
 }
