@@ -67,7 +67,7 @@ const fptype m23_upper = (_mDp-pi0Mass)*(_mDp-pi0Mass);
 bool m_draw_data = false;
 bool m_effPoly = false;
 
-bool m_float_init = true;
+bool m_float_init = false;
 bool m_float_polyeff = false;
 
 bool m_draw_polyeff = false;
@@ -83,8 +83,10 @@ std::string eff_filename="weighted_acceptance_bin150.root";
 //std::string eff_filename="efficiency_acceptance_bin150.root";
 //std::string eff_filename="efficiency_acceptance_bin200.root";
 
-std::string data_filename = "data_tagAll.root";
+//std::string data_filename = "data_tagAll.root";
 //std::string data_filename = "check_IO.root";
+std::string data_filename = "check_IO_truth.root";
+//std::string data_filename = "toyCheck.root";
 
 //std::string data_filename = "TagKpipi.root";
 //std::string data_filename = "TagKpipipi0.root";
@@ -96,6 +98,7 @@ std::string data_filename = "data_tagAll.root";
 TRandom3 rnd;
 
 void makeEffPlot(GooPdf* total, UnbinnedDataSet* data);
+void saveToy(Amp3Body *signal, Observable &m12, Observable &m13, EventNumber &eventNumber);
 // Constants used in more than one PDF component.
 Variable motherM("motherM", _mDp);
 Variable chargeM("chargeM", KpMass);
@@ -486,7 +489,7 @@ Amp3Body *makeSignalPdf(Observable m12, Observable m13, EventNumber eventNumber,
 	dtop0pp.resonances.push_back(K892p);
 	dtop0pp.resonances.push_back(K892zero);
 //	dtop0pp.resonances.push_back(K1410p);
-//	dtop0pp.resonances.push_back(K1410zero);
+	dtop0pp.resonances.push_back(K1410zero);
 //	dtop0pp.resonances.push_back(a980p);
 	dtop0pp.resonances.push_back(SwaveKppi0);
 	dtop0pp.resonances.push_back(SwaveKspi0);
@@ -1094,6 +1097,8 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err, bool fixA
 
 	cout << fixed << setprecision(8);
 
+	datapdf->printParams();
+
 	//fit fractions
 	vector <vector<fptype>> fracMat;
 	fracMat = signal->fit_fractions();
@@ -1145,11 +1150,6 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err, bool fixA
 		m23_pdf_hist.SetLineColor(kRed); 
 		m23_pdf_hist.SetLineWidth(2); 
 	
-//		//for out put hist
-//		TH1F m12_sigpdf("m12_sigpdf", "", m12.getNumBins(), m12.getLowerLimit(), m12.getUpperLimit());
-//		TH1F m13_sigpdf("m13_sigpdf", "", m13.getNumBins(), m13.getLowerLimit(), m13.getUpperLimit());
-//		TH1F m23_sigpdf("m23_sigpdf", "", m12.getNumBins(), getM23LowerLimit(m12,m13), getM23UpperLimit(m12,m13));
-
 		fptype m12_tmp,m13_tmp,m23_tmp;
 	
 		UnbinnedDataSet toyMC({m12, m13, eventNumber});
@@ -1159,28 +1159,75 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err, bool fixA
 		for (int i = 0; i < eventNumber.getValue(); ++i){
 			m12_tmp = toyMC.getValue(m12, i);
 			m12_pdf_hist.Fill(m12_tmp);
-//			m12_sigpdf.Fill(m12_tmp);
 	
 			m13_tmp = toyMC.getValue(m13, i);
 			m13_pdf_hist.Fill(m13_tmp);
-//			m13_sigpdf.Fill(m13_tmp);
 	
 			m23_tmp = cpuGetM23(m12_tmp, m13_tmp);
 			m23_pdf_hist.Fill(m23_tmp);
-//			m23_sigpdf.Fill(m23_tmp);
 		}
 
-//		//for out put hist
-//		m12_sigpdf.Scale(100000/m12_sigpdf.Integral());
-//		m13_sigpdf.Scale(100000/m13_sigpdf.Integral());
-//		m23_sigpdf.Scale(100000/m23_sigpdf.Integral());
-//
-//		m12_sigpdf.SaveAs("plots/m12_sigpdf.root");
-//		m13_sigpdf.SaveAs("plots/m13_sigpdf.root");
-//		m23_sigpdf.SaveAs("plots/m23_sigpdf.root");
+		//for resonances distribution 
+		vector<PdfBase*> comps;
+		comps.clear();
+		comps.push_back(signal);
+		ProdPdf* sigtemp = new ProdPdf("signal_temp", comps);
+//		GooPdf * sigtemp = (GooPdf *) signal;
+
+		std::vector<Observable> vars;
+		vars.push_back(m12);
+		vars.push_back(m13);
+		vars.push_back(eventNumber); 
+		UnbinnedDataSet currData(vars); 
 	
-		//for comparison
-	
+		int evtCounter = 0; 
+		for (int i = 0; i < m12.getNumBins(); ++i) {
+			m12.setValue(m12.getLowerLimit() + (m12.getUpperLimit() - m12.getLowerLimit())*(i + 0.5) / m12.getNumBins()); 
+			for (int j = 0; j < m13.getNumBins(); ++j) {
+				m13.setValue(m13.getLowerLimit()+ (m13.getUpperLimit()- m13.getLowerLimit())*(j + 0.5) / m13.getNumBins()); 
+		
+		          if (!cpuDalitz(m12.getValue(), m13.getValue())) continue;
+		          eventNumber.setValue(evtCounter); 
+		          evtCounter++;
+		          currData.addEvent(); 
+			}
+		}
+		sigtemp->setData(&currData);
+		std::vector<std::vector<fptype>> pdfValues;
+		pdfValues = sigtemp->getCompProbsAtDataPoints();
+
+		const int nRes = pdfValues.size();
+		cout << "num of nRes = " << nRes << endl;
+		TH1F* m12_pdf_hist_res[nRes];
+		TH1F* m13_pdf_hist_res[nRes];
+		TH1F* m23_pdf_hist_res[nRes];
+		for (int i=0;i<nRes;i++){
+			sprintf(strbuffer, "%s_res%d", m12_pdf_hist.GetName(), i);
+			m12_pdf_hist_res[i] = (TH1F*)m12_pdf_hist.Clone(strbuffer);
+			m12_pdf_hist_res[i]->Reset();
+
+			sprintf(strbuffer, "%s_res%d", m13_pdf_hist.GetName(), i);
+			m13_pdf_hist_res[i] = (TH1F*)m13_pdf_hist.Clone(strbuffer);
+			m13_pdf_hist_res[i]->Reset();
+
+			sprintf(strbuffer, "%s_res%d", m23_pdf_hist.GetName(), i);
+			m23_pdf_hist_res[i] = (TH1F*)m23_pdf_hist.Clone(strbuffer);
+			m23_pdf_hist_res[i]->Reset();
+		}
+		 for (unsigned int j = 0; j < pdfValues[0].size(); ++j) {
+			double currm12 = currData.getValue(m12, j);
+			double currm13 = currData.getValue(m13, j);
+			double currm23 = cpuGetM23(currm12, currm13);
+			for (int i=0;i<nRes;i++){
+				m12_pdf_hist_res[i]->Fill(currm12, pdfValues[i][j]);
+				m13_pdf_hist_res[i]->Fill(currm13, pdfValues[i][j]);
+				m23_pdf_hist_res[i]->Fill(currm23, pdfValues[i][j]);
+//				cout<<"For Res #"<<i<<", "<<j<<": "<<currm12<<','<<currm13<<": "<<pdfValues[i][j]<<endl;
+			}
+		}
+
+
+		//for data comparison
 		TString a("Events/"); TString c(" GeV^{2}/c^{4})");
 		TH1F *m12_data = new TH1F("m12_data","", m12.getNumBins(), m12.getLowerLimit(), m12.getUpperLimit());
 		char b_m12[20];  sprintf(b_m12, "(%g",(m12.getUpperLimit()-m12.getLowerLimit())/m12.getNumBins());
@@ -1191,7 +1238,6 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err, bool fixA
 		m12_data->GetYaxis()->SetTitle(ytitle_m12);
 		m12_data->GetXaxis()->SetTitle("M^{2}(K^{+}#pi^{0}) (GeV^{2}/c^{4})");
 		m12_data->SetLineColor(1);
-	
 	
 		TH1F *m13_data = new TH1F("m13_data","", m13.getNumBins(), m13.getLowerLimit(), m13.getUpperLimit());
 		char b_m13[20];  sprintf(b_m13, "(%g",(m13.getUpperLimit()-m13.getLowerLimit())/m13.getNumBins());
@@ -1218,8 +1264,6 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err, bool fixA
 			dalitzplot->GetNbinsX(), dalitzplot->GetXaxis()->GetXmin(), dalitzplot->GetXaxis()->GetXmax(),
 			dalitzplot->GetNbinsY(), dalitzplot->GetYaxis()->GetXmin(), dalitzplot->GetYaxis()->GetXmax());
 	
-	
-
 		TFile *f = TFile::Open(data_filename.c_str());
 		TTree *t = (TTree *)f->Get("DTag");
 		assert(t);
@@ -1292,7 +1336,6 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err, bool fixA
 		//Drawing data & fit comparison
 		TCanvas *foo = new TCanvas("c1","c1",800,700);
 		foo->Divide(2,2);
-	
 		foo->cd(1);
 		pull->Draw("colz");
 	
@@ -1302,6 +1345,7 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err, bool fixA
 		m12_pdf_hist.Draw("Hsame");
 		m12_data->Rebin(2);
 		m12_pdf_hist.Rebin(2);
+
 
 		foo->cd(3);
 		m13_data->Draw("e");
@@ -1321,6 +1365,58 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err, bool fixA
 			foo->SaveAs("plots/dalitz_with_projections.C");
 		else
 			foo->SaveAs("plots/dalitz_with_projections_effPoly.C");
+
+//		for (int i=0;i<nRes;i++){
+//			m12_pdf_hist_res[i]->SetLineColor(i+1);
+//			m12_pdf_hist_res[i]->SetLineWidth(1.2);
+//			m12_pdf_hist_res[i]->Rebin(2);
+//			m12_pdf_hist_res[i]->Draw("Hsame");
+//
+//			foo->cd(3);
+//			m13_pdf_hist_res[i]->SetLineColor(i+1);
+//			m13_pdf_hist_res[i]->SetLineWidth(1.2);
+//			m13_pdf_hist_res[i]->Rebin(2);
+//			m13_pdf_hist_res[i]->Draw("Hsame");
+//
+//			foo->cd(4);
+//			m23_pdf_hist_res[i]->SetLineColor(i+1);
+//			m23_pdf_hist_res[i]->SetLineWidth(1.2);
+//			m23_pdf_hist_res[i]->Rebin(2);
+//			m23_pdf_hist_res[i]->Draw("Hsame");
+//		}
+
+//		TCanvas *foo2 = new TCanvas("c2","c2",1200,400);
+//		foo2->Divide(3,1);
+//
+//		foo2->cd(1);
+//		m12_pdf_hist_res[1]->Rebin(2);
+//		for (unsigned int j = 0; j < pdfValues[0].size(); ++j)
+//	          m12_pdf_hist_res[1]->SetBinError(j,0);
+//		m12_pdf_hist_res[1]->Scale(m12_data->Integral()/m12_pdf_hist_res[1]->Integral());
+//
+//		m12_data->Draw("e");
+//		m12_pdf_hist_res[1]->Draw("Hsame");
+//
+//		foo2->cd(2);
+//		m13_pdf_hist_res[1]->Rebin(2);
+//		for (unsigned int j = 0; j < pdfValues[0].size(); ++j)
+//	          m13_pdf_hist_res[1]->SetBinError(j,0);
+//		m13_pdf_hist_res[1]->Scale(m13_data->Integral()/m13_pdf_hist_res[1]->Integral());
+//
+//		m13_data->Draw("e");
+//		m13_pdf_hist_res[1]->Draw("Hsame");
+//
+//		foo2->cd(3);
+//		m23_pdf_hist_res[1]->Rebin(2);
+//		for (unsigned int j = 0; j < pdfValues[0].size(); ++j)
+//	          m23_pdf_hist_res[1]->SetBinError(j,0);
+//		m23_pdf_hist_res[1]->Scale(m23_data->Integral()/m23_pdf_hist_res[1]->Integral());
+//
+//		m23_data->Draw("e");
+//		m23_pdf_hist_res[1]->Draw("Hsame");
+//
+//		foo2->SaveAs("plots/temp.C");
+
 
 		m12.setNumBins(oldBins1);
 		m13.setNumBins(oldBins2);
@@ -1407,16 +1503,15 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err, bool fixA
 //	return 0;
 }
 
-void gen_test_pdf(){
+void gen_test_pdf(bool use_eff = false,bool save_toy = false){
 	Observable m12("m12", 0.3, 2);
 	Observable m13("m13", 0.3, 2);
 	EventNumber eventNumber("eventNumber");
-	m12.setNumBins(BinNumsM12);
-	m13.setNumBins(BinNumsM13);
+//	m12.setNumBins(BinNumsM12);
+//	m13.setNumBins(BinNumsM13);
+	m12.setNumBins(200);
+	m13.setNumBins(200);
 
-	TH1F m12_sigpdf("m12_sigpdf", "", m12.getNumBins(), m12.getLowerLimit(), m12.getUpperLimit());
-	TH1F m13_sigpdf("m13_sigpdf", "", m13.getNumBins(), m13.getLowerLimit(), m13.getUpperLimit());
-	TH1F m23_sigpdf("m23_sigpdf", "", m12.getNumBins(), getM23LowerLimit(m12,m13), getM23UpperLimit(m12,m13));
 
 	DecayInfo3 dtop0pp;
 	dtop0pp.motherMass   = _mDp;
@@ -1429,8 +1524,8 @@ void gen_test_pdf(){
 	Variable K892pWidth("K892p_width", 0.0503);
 	ResonancePdf *K892p = new Resonances::RBW(
 		"K892p", 
-		Variable("K892p_amp_real", -0.4871474223254), 
-		Variable("K892p_amp_imag", 0.001120132013781), 
+		Variable("K892p_amp_real", 1.), 
+		Variable("K892p_amp_imag", 0.), 
 		K892pMass, 
 		K892pWidth, 
 		1, 
@@ -1440,41 +1535,30 @@ void gen_test_pdf(){
 	Variable K892zeroWidth("K892zero_width", 0.0473);
 	ResonancePdf *K892zero = new Resonances::RBW(
 		"K892zero",
-		Variable("K892zero_amp_real", -0.4871474223254),
-		Variable("K892zero_amp_imag", 0.001120132013781),
+		Variable("K892zero_amp_real", -0.1661978868255),
+		Variable("K892zero_amp_imag", 0.2782520474192),
 		K892zeroMass,
 		K892zeroWidth,
-		0,
+		1,
 		PAIR_13);
 
      Variable K1410zeroMass("K1410zero_mass", 1.421);
      Variable K1410zeroWidth("K1410zero_width", 0.236);
      ResonancePdf *K1410zero = new Resonances::RBW(
           "K1410zero",
-          Variable("K1410zero_amp_real", -1.676234687673),
-          Variable("K1410zero_amp_imag", 1.25884833851),
+          Variable("K1410zero_amp_real", -1.429763770204),
+          Variable("K1410zero_amp_imag", 0.5947540558733),
           K1410zeroMass,
           K1410zeroWidth,
           1,
           PAIR_13);
 
-     Variable a1450pMass("a1450p_Mass", 1.474);
-     Variable a1450pWidth("a1450p_Width", 0.265);
-     ResonancePdf *a1450p = new Resonances::RBW(
-          "a1450p",
-          Variable("a1450p_amp_real", -1.167432844979),
-          Variable("a1450p_amp_imag", 0.2174462280103),
-          a1450pMass,
-          a1450pWidth,
-          0,
-          PAIR_23);
-
      Variable SwaveKppi0Mass("SwaveKppi0_Mass", 1.425);
      Variable SwaveKppi0Width("SwaveKppi0_Width", 0.27);
      ResonancePdf *SwaveKppi0 = new Resonances::LASS(
           "SwaveKppi0",
-          Variable("SwaveKppi0_amp_real", 5.251775650343),
-          Variable("SwaveKppi0_amp_imag", 0.4439884037173),
+          Variable("SwaveKppi0_amp_real", 2.215632835258),
+          Variable("SwaveKppi0_amp_imag", -0.4672151150163),
           SwaveKppi0Mass,
           SwaveKppi0Width,
           0,
@@ -1484,8 +1568,8 @@ void gen_test_pdf(){
      Variable SwaveKspi0Width("SwaveKspi0_Width", 0.27);
      ResonancePdf *SwaveKspi0 = new Resonances::LASS(
           "SwaveKspi0",
-          Variable("SwaveKspi0_amp_real", 0.5333076345728),
-          Variable("SwaveKspi0_amp_imag", -1.568683551211),
+          Variable("SwaveKspi0_amp_real", 1.608350533645),
+          Variable("SwaveKspi0_amp_imag", -0.8386699269021),
           SwaveKspi0Mass,
           SwaveKspi0Width,
           0,
@@ -1495,21 +1579,153 @@ void gen_test_pdf(){
 	dtop0pp.resonances.push_back(K892p);
 	dtop0pp.resonances.push_back(K892zero);
 	dtop0pp.resonances.push_back(K1410zero);
-	dtop0pp.resonances.push_back(a1450p);
 	dtop0pp.resonances.push_back(SwaveKppi0);
 	dtop0pp.resonances.push_back(SwaveKspi0);
 
-	vector<Variable> offsets;
-	vector<Observable> observables;
-	vector<Variable> coefficients;
-	observables.push_back(m12);
-	observables.push_back(m13);
-	offsets.push_back(constantZero);
-	offsets.push_back(constantZero);
-	coefficients.push_back(constantOne);
-	GooPdf *eff = new PolynomialPdf("constantEff", observables, coefficients, offsets, 0);
+	GooPdf *eff = NULL;
+	if(!use_eff){
+		vector<Variable> offsets;
+		vector<Observable> observables;
+		vector<Variable> coefficients;
+		observables.push_back(m12);
+		observables.push_back(m13);
+		offsets.push_back(constantZero);
+		offsets.push_back(constantZero);
+		coefficients.push_back(constantOne);
+		eff = new PolynomialPdf("constantEff", observables, coefficients, offsets, 0);
+	}
+
+	else{
+		TFile *f = TFile::Open(eff_filename.c_str()); 
+		TH2D* h2 = (TH2D*)f->Get("th2d_dalitz"); //assert(h2);
+		
+		int oldBins1 = m12.getNumBins();
+		int oldBins2 = m13.getNumBins();
+		m12.setNumBins(h2->GetNbinsX());
+		m13.setNumBins(h2->GetNbinsY());
+	
+		BinnedDataSet *binEffData = new BinnedDataSet({m12, m13, eventNumber});
+	
+		int num = m12.getNumBins()*m13.getNumBins();
+	
+		for (int i = 0;i < num; i++){
+			int iy = i/m12.getNumBins();
+			int ix = i%m12.getNumBins();
+			double content = h2->GetBinContent(ix+1,iy+1);
+			binEffData->setBinContent(i, content);
+		}
+		SmoothHistogramPdf* ret = new SmoothHistogramPdf("test_eff", binEffData, Variable("smoothConst", 10));
+		m12.setNumBins(oldBins1);
+		m13.setNumBins(oldBins2);
+		f->Close();
+		eff = ret;
+	}
 
 	Amp3Body *signal = new Amp3Body("signalPDF_test", m12, m13, eventNumber, dtop0pp, eff);
+	signal->setParameterConstantness(true);
+
+	if(save_toy)
+		saveToy(signal,m12,m13,eventNumber);
+
+
+
+	UnbinnedDataSet data({m12, m13, eventNumber});
+//	TFile *ff = TFile::Open("data_tagAll.root");
+	TFile *ff = TFile::Open("toyCheck.root");
+	TTree *tree = (TTree *)ff->Get("DTag");
+	assert(tree);
+
+	fptype m_Kppi0_sq, m_Kspi0_sq, m_recoil, dE_sig;
+	tree->SetBranchAddress("m_Kppi0_sq",&m_Kppi0_sq);
+	tree->SetBranchAddress("m_Kspi0_sq",&m_Kspi0_sq);
+	tree->SetBranchAddress("m_recoil",&m_recoil);
+	tree->SetBranchAddress("dE_sig",&dE_sig);
+
+	for(int i = 0; i < tree->GetEntries(); i++){
+		tree->GetEvent(i);
+		if(m_recoil<1.8648||m_recoil>1.8772) continue;
+		if(dE_sig<-0.03||dE_sig>0.02) continue;
+		if(!cpuDalitz(m_Kppi0_sq,m_Kspi0_sq)) continue;
+		m12.setValue(m_Kppi0_sq);
+		m13.setValue(m_Kspi0_sq);
+		eventNumber.setValue(data.getNumEvents());
+		data.addEvent();
+	}
+	ff->Close();
+
+	signal->setData(&data);
+	signal->setDataSize(data.getNumEvents());
+
+	signal->normalize();
+
+	cout << fixed << setprecision(8);
+	vector <vector<fptype>> fracMat;
+	fracMat.clear();
+	fracMat = signal->fit_fractions();
+	const int num_res = fracMat.size();
+	for (int i = 0; i < num_res; ++i){
+		for (int j = 0; j < num_res; ++j){
+			cout << fracMat[i][j] << ",  ";
+		}
+		cout << endl;
+	}
+
+
+//	ProdPdf prodpdf{"prodpdf", {signal}};
+//	DalitzPlotter plotter(&prodpdf, signal);
+
+//	UnbinnedDataSet toyMC({m12, m13, eventNumber});
+//	plotter.fillDataSetMC(toyMC, 600000);
+
+//	int oldBins1 = m12.getNumBins();
+//	int oldBins2 = m13.getNumBins();
+//	m12.setNumBins(drawBinM12);
+//	m13.setNumBins(drawBinM13);
+
+
+//	TH1F m12_sigpdf("m12_sigpdf", "", m12.getNumBins(), m12.getLowerLimit(), m12.getUpperLimit());
+//	TH1F m13_sigpdf("m13_sigpdf", "", m13.getNumBins(), m13.getLowerLimit(), m13.getUpperLimit());
+//	TH1F m23_sigpdf("m23_sigpdf", "", m12.getNumBins(), getM23LowerLimit(m12,m13), getM23UpperLimit(m12,m13));
+//
+//
+//	fptype m12_tmp,m13_tmp,m23_tmp;
+//	for (int i = 0; i < eventNumber.getValue(); ++i){
+//		m12_tmp = toyMC.getValue(m12, i);
+//		m12_sigpdf.Fill(m12_tmp);
+//
+//		m13_tmp = toyMC.getValue(m13, i);
+//		m13_sigpdf.Fill(m13_tmp);
+//
+//		m23_tmp = cpuGetM23(m12_tmp, m13_tmp);
+//		m23_sigpdf.Fill(m23_tmp);
+//	}
+//
+//	//for out put hist
+//	TCanvas *foo = new TCanvas("c1","c1",1200,350);
+//	foo->Divide(3,1);
+//
+//	foo->cd(1);
+//	m12_sigpdf.Draw("H");
+//
+//	foo->cd(2);
+//	m13_sigpdf.Draw("H");
+//
+//	foo->cd(3);
+//	m23_sigpdf.Draw("H");
+//
+//	foo->SaveAs("plots/test_pdf_plot.C");
+//
+//	m12.setNumBins(oldBins1);
+//	m13.setNumBins(oldBins2);
+
+}
+
+void saveToy(Amp3Body *signal, Observable &m12, Observable &m13, EventNumber &eventNumber){
+//	Observable m12("m12", 0.3, 2);
+//	Observable m13("m13", 0.3, 2);
+//	EventNumber eventNumber("eventNumber");
+//	m12.setNumBins(400);
+//	m13.setNumBins(400);
 
 	ProdPdf prodpdf{"prodpdf", {signal}};
 	DalitzPlotter plotter(&prodpdf, signal);
@@ -1518,38 +1734,32 @@ void gen_test_pdf(){
 	plotter.fillDataSetMC(toyMC, 600000);
 
 	fptype m12_tmp,m13_tmp,m23_tmp;
-	cout << "toyMC size = " << eventNumber.getValue() << endl;
+	TFile *newfile = new TFile("toyCheck.root","recreate");
+	TTree *newtree = new TTree("DTag","");
+	
+	double m_recoil, dE_sig, m_KpKs_sq, m_Kppi0_sq, m_Kspi0_sq;
+	newtree->Branch("m_recoil",&m_recoil,"m_recoil/D");
+	newtree->Branch("dE_sig",&dE_sig,"dE_sig/D");
+	newtree->Branch("m_Kppi0_sq",&m_Kppi0_sq,"m_Kppi0_sq/D");
+	newtree->Branch("m_Kspi0_sq",&m_Kspi0_sq,"m_Kspi0_sq/D");
+	newtree->Branch("m_KpKs_sq",&m_KpKs_sq,"m_KpKs_sq/D");
 
 	for (int i = 0; i < eventNumber.getValue(); ++i){
 		m12_tmp = toyMC.getValue(m12, i);
-		m12_sigpdf.Fill(m12_tmp);
-
 		m13_tmp = toyMC.getValue(m13, i);
-		m13_sigpdf.Fill(m13_tmp);
-
 		m23_tmp = cpuGetM23(m12_tmp, m13_tmp);
-		m23_sigpdf.Fill(m23_tmp);
+
+		m_recoil = 1.87;
+		dE_sig = 0;
+		m_Kppi0_sq = m12_tmp;
+		m_Kspi0_sq = m13_tmp;
+		m_KpKs_sq = m23_tmp;
+		newtree->Fill();
 	}
-
-	//for out put hist
-//	m12_sigpdf.Scale(200000/m12_sigpdf.Integral());
-//	m13_sigpdf.Scale(200000/m13_sigpdf.Integral());
-//	m23_sigpdf.Scale(200000/m23_sigpdf.Integral());
-
-	TCanvas *foo = new TCanvas("c1","c1",1200,350);
-	foo->Divide(3,1);
-
-	foo->cd(1);
-	m12_sigpdf.Draw("H");
-
-	foo->cd(2);
-	m13_sigpdf.Draw("H");
-
-	foo->cd(3);
-	m23_sigpdf.Draw("H");
-
-	foo->SaveAs("plots/test_pdf_plot.C");
+	newtree->Write();
+	newfile->Close();
 }
+
 
 int main(int argc, char **argv) {
 	GooFit::Application app("Dalitz example", argc, argv);
@@ -1557,7 +1767,6 @@ int main(int argc, char **argv) {
 	int seed = 2333333*(double)rand()/((double)RAND_MAX);
 	rnd.SetSeed(seed);
 
-//	std::string filename = "data_tagAll.root";
 	app.add_option("-f,--filename,filename", data_filename, "File to read in", true)->check(GooFit::ExistingFile);
 
 	GOOFIT_PARSE(app);
@@ -1582,8 +1791,8 @@ int main(int argc, char **argv) {
 	else
 		eff = fitEffPoly(data);
 
-if(m_fit_data){
 
+if(m_fit_data){
 	//Read in data
 	getRealData(data_filename, app, data);
 
@@ -1669,11 +1878,14 @@ if(m_fit_data){
 //			init_val.push_back(-1.732354196769);
 //			init_val.push_back(2.915962244536);
 		}
-		Amp3Body *signal = makeSignalPdf(m12, m13, eventNumber, init_val, 0, eff, false);
+
+//		Amp3Body *signal = makeSignalPdf(m12, m13, eventNumber, init_val, 0, eff, false);
+		Amp3Body *signal = makeSignalPdf(m12, m13, eventNumber, init_val, 0, 0, false);
 		runDataFit(signal, &data, true);
 	}
 }
 	if(m_test_pdf)
-		gen_test_pdf();
+		//use_eff, save_toy
+		gen_test_pdf(false,false);
 	return 1;
 }
