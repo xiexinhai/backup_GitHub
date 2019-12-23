@@ -48,8 +48,5 @@ class Params : public Minuit2::MnUserParameters {
 
     /// Get recorded values array
     std::vector<std::vector<double>> get_recorded() const { return recorded_; }
-
-    /// For fit errors calculation by xxh
-    std::vector<Variable> get_vars(){return vars_;}
 };
 } // namespace GooFit
