@@ -1,3 +1,4 @@
+#include <TMath.h>
 #include <goofit/fitting/FitManagerMinuit2.h>
 
 #include <goofit/Color.h>
@@ -16,6 +17,7 @@
 
 namespace GooFit {
 
+using namespace std;
 FitManagerMinuit2::FitManagerMinuit2(PdfBase *dat)
     : upar_(*dat)
     , fcn_(upar_) {pdfPointer = dat;}
@@ -88,16 +90,50 @@ void FitManagerMinuit2::printCovMat()
 	std::cout << std::endl << matCov << std::endl;
 }
 
-//void FitManagerMinuit2::printParams()
-//{
+void FitManagerMinuit2::printParams()
+{
 //	std::cout << std::endl << pdfPointer->getParameters() << std::endl;
-//}
+
+	std::vector<Variable> vec_vars = pdfPointer->getParameters();
+	std::vector<double> floatVarVal;
+	floatVarVal.clear();
+
+	for(Variable &var : vec_vars) {
+		if (var.IsFixed()) continue;
+		int counter = var.getFitterIndex();
+		floatVarVal.push_back(var.getValue());
+//		std::cout << "check for Index " << counter << ": value = " << var.getValue() << std::endl;
+	}
+
+	std::vector<double> vec_mag;
+	vec_mag.clear();
+	std::vector<double> vec_phi;
+	vec_phi.clear();
+	cout << "free parameter resonance: " << floatVarVal.size()/2 << endl;
+
+	std::cout << fixed << setprecision(8);
+	std::cout << "                      Magnitude            Phase   " << endl;
+
+	for(int i = 0; i < floatVarVal.size(); i+=2){
+		double a = floatVarVal[i];
+		double b = floatVarVal[i+1];
+		double mag = sqrt(a*a + b*b);
+		double phi = atan(b/a)*360/2/TMath::Pi();
+		if(a<0&&b<0) phi-=180;
+		if(a<0&&b>0) phi+=180;
+		vec_mag.push_back(mag);
+		vec_phi.push_back(phi);
+		std::cout << "coefficient Res #" << (i+2)/2 << ":  " << mag << "       " << phi << endl;
+	}
+}
 
 
 void FitManagerMinuit2::setRandMinuitValues (const int nSamples){
 	rnd.SetSeed(nSamples+388);
 	std::vector<double> floatVarVal;
+	floatVarVal.clear();
 	std::vector<double> floatVarErr;
+	floatVarErr.clear();
 	//std::vector<Variable> vec_vars = upar_.get_vars();
 	std::vector<Variable> vec_vars = pdfPointer->getParameters();
 //	fvarIndex.clear();
