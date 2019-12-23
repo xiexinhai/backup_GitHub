@@ -46,12 +46,22 @@ __device__ fpcomplex lass(fptype m12, fptype m13, fptype m23, ParameterContainer
     fptype g = reswidth * pow(measureDaughterMoms / nominalDaughterMoms, 2.0 * spin + 1) * frFactor / sqrt(rMassSq);
     g *= sqrt(resmass);
 
-    fptype _a    = 0.22357;
-    fptype _r    = -15.042;
-    fptype _R    = 1; // ?
-    fptype _phiR = 1.10644;
-    fptype _B    = 0.614463;
-    fptype _phiB = -0.0981907;
+	//old
+//    fptype _a    = 0.22357;
+//    fptype _r    = -15.042;
+//    fptype _R    = 1;
+//    fptype _phiR = 1.10644;
+//    fptype _B    = 0.614463;
+//    fptype _phiB = -0.0981907;
+
+	//new cited
+    fptype _a    = 0.224;
+    fptype _r    = -15.01;
+    fptype _R    = 1;
+    fptype _phiR = 1.10;
+    fptype _B    = 0.62;
+    fptype _phiB = -0.100;
+
 
     // background phase motion
     fptype cot_deltaB  = (1.0 / (_a * q)) + 0.5 * _r * q;
