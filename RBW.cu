@@ -23,7 +23,7 @@ __device__ fpcomplex plainBW(fptype m12, fptype m13, fptype m23, ParameterContai
         fptype rMass = sqrt(rMassSq);
         fptype mass_daug1 = PAIR_23 == cyclic_index ? c_daug2Mass : c_daug1Mass;
         fptype mass_daug2 = PAIR_12 == cyclic_index ? c_daug2Mass : c_daug3Mass;
-        fptype mass_daug3 = PAIR_12 == cyclic_index ? c_daug3Mass : (PAIR_23 == cyclic_index?c_daug1Mass:c_daug3Mass);
+        fptype mass_daug3 = PAIR_12 == cyclic_index ? c_daug3Mass : (PAIR_23 == cyclic_index?c_daug1Mass:c_daug2Mass);
 
         fptype frFactor = 1;
         fptype fdFactor = 1;
