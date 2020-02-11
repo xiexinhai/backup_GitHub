@@ -3,6 +3,7 @@ cp Amp3Body.h                          ~/GooFit/include/goofit/PDFs/physics/Amp3
 cp FitManagerMinuit2.cpp               ~/GooFit/src/goofit/FitManagerMinuit2.cpp
 cp FitManagerMinuit2.h                 ~/GooFit/include/goofit/fitting/FitManagerMinuit2.h
 cp LASS.cu                             ~/GooFit/src/PDFs/physics/resonances/LASS.cu
+cp FLATTE.cu                           ~/GooFit/src/PDFs/physics/resonances/FLATTE.cu
 cp MetricTaker.cu                      ~/GooFit/src/PDFs/MetricTaker.cu
 cp Params.cpp                          ~/GooFit/src/goofit/Params.cpp
 cp Params.h                            ~/GooFit/include/goofit/fitting/Params.h
