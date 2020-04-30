@@ -39,7 +39,7 @@ __device__ fpcomplex plainBW(fptype m12, fptype m13, fptype m23, ParameterContai
                        / dampingFactorSquare(measureDaughterMoms, spin, c_meson_radius);
             fptype measureDaughterMoms2 = twoBodyCMmom(c_motherMass*c_motherMass, rMass, mass_daug3);
             fptype nominalDaughterMoms2 = twoBodyCMmom(c_motherMass*c_motherMass, resmass, mass_daug3);
-            fdFactor =  dampingFactorSquare(nominalDaughterMoms2, spin, 5.)
+            fdFactor =  dampingFactorSquare(nominalDaughterMoms2, spin, 5.) //nominal is 5
                 / dampingFactorSquare(measureDaughterMoms2, spin, 5.);
         }
 
