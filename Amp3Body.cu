@@ -26,6 +26,11 @@ struct CoefSumFunctor {
         return (coef_i * thrust::conj<fptype>(coef_j) * thrust::get<0>(val) * thrust::conj<fptype>(thrust::get<1>(val)))
             .real();
     }
+
+//    __device__ fptype operator()(thrust::tuple<fpcomplex> val) {
+//        return (coef_i * thrust::conj<fptype>(coef_j) * thrust::get<0>(val));
+//    }
+
 };
 
 constexpr int resonanceOffset_DP = 4; // Offset of the first resonance into the parameter index array
@@ -437,11 +442,26 @@ __host__ std::vector<std::vector<fptype>> Amp3Body::fit_fractions() {
 //                thrust::plus<fptype>());
 
 		  buffer = coef_i * thrust::conj<fptype>(coef_j) * (*(integrals_ff[i][j]));
+//		  std::cout << "buffer element " << i << " " << j << "  " << buffer << std::endl;
+
+//            buffer += thrust::transform_reduce(
+//                thrust::make_zip_iterator(thrust::make_tuple(cached_i.begin())),
+//                thrust::make_zip_iterator(thrust::make_tuple(cached_i.end())),
+//                CoefSumFunctor(coef_i, coef_j),
+//                (fptype)0.0,
+//                thrust::plus<fptype>());
+
             buffer_all += buffer;
 //            Amps_int[i][j] = (buffer / nEntries);
-            Amps_int[i][j] = buffer.real();
+		  if(i == j)
+	            Amps_int[i][j] = buffer.real();
+		  else
+	            Amps_int[i][j] = 2*buffer.real();
+
         }
     }
+
+//	std::cout << "buffer_all = " << buffer_all << std::endl;
 
 //    fptype total_PDF = buffer_all / nEntries;
     fptype total_PDF = buffer_all.real();
@@ -449,9 +469,12 @@ __host__ std::vector<std::vector<fptype>> Amp3Body::fit_fractions() {
     std::vector<std::vector<fptype>> ff(n_res, std::vector<fptype>(n_res));
 
     for(size_t i = 0; i < n_res; i++)
-        for(size_t j = 0; j < n_res; j++)
+        for(size_t j = 0; j < n_res; j++){
             ff[i][j] = (Amps_int[i][j] / total_PDF);
+//		  if(i == j) std::cout << "ff element " << i << " " << j << "  " << ff[i][j] << std::endl;
+		}
 
+//    std::cout << "test for runing numbers." << std::endl;
     return ff;
 }
 
