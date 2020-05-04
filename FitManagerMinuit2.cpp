@@ -90,6 +90,30 @@ void FitManagerMinuit2::printCovMat()
 	std::cout << std::endl << matCov << std::endl;
 }
 
+double FitManagerMinuit2::dmda(double a, double b)
+{
+	double ret = a/sqrt(a*a+b*b);
+	return ret;
+}
+
+double FitManagerMinuit2::dmdb(double a, double b)
+{
+	double ret = b/sqrt(a*a+b*b);
+	return ret;
+}
+
+double FitManagerMinuit2::dpda(double a, double b)
+{
+	double ret = (360/2/TMath::Pi())*(-b/a/a)/(1+b*b/a/a);
+	return ret;
+}
+
+double FitManagerMinuit2::dpdb(double a, double b)
+{
+	double ret = (360/2/TMath::Pi())*(1/a)/(1+b*b/a/a);
+	return ret;
+}
+
 void FitManagerMinuit2::printParams()
 {
 //	std::cout << std::endl << pdfPointer->getParameters() << std::endl;
@@ -105,10 +129,10 @@ void FitManagerMinuit2::printParams()
 //		std::cout << "check for Index " << counter << ": value = " << var.getValue() << std::endl;
 	}
 
-	std::vector<double> vec_mag;
-	vec_mag.clear();
-	std::vector<double> vec_phi;
-	vec_phi.clear();
+	std::vector<double> vec_mag, vec_mag_err;
+	vec_mag.clear(); vec_mag_err.clear();
+	std::vector<double> vec_phi, vec_phi_err;
+	vec_phi.clear(); vec_phi_err.clear();
 	cout << "free parameter resonance: " << floatVarVal.size()/2 << endl;
 
 	std::cout << fixed << setprecision(8);
@@ -119,11 +143,27 @@ void FitManagerMinuit2::printParams()
 		double b = floatVarVal[i+1];
 		double mag = sqrt(a*a + b*b);
 		double phi = atan(b/a)*360/2/TMath::Pi();
+
+		double mag_err = dmda(a,b)*dmda(a,b)*matCov(i,i)
+					 +dmdb(a,b)*dmdb(a,b)*matCov(i+1,i+1)
+					 +2*dmda(a,b)*dmdb(a,b)*matCov(i,i+1);
+		if(mag_err<0) mag_err=0;
+		mag_err = sqrt(mag_err);
+
+		double phi_err = dpda(a,b)*dpda(a,b)*matCov(i,i)
+					 +dpdb(a,b)*dpdb(a,b)*matCov(i+1,i+1)
+					 +2*dpda(a,b)*dpdb(a,b)*matCov(i,i+1);
+		if(phi_err<0) phi_err=0;
+		phi_err = sqrt(phi_err);
+
 		if(a<0&&b<0) phi-=180;
 		if(a<0&&b>0) phi+=180;
 		vec_mag.push_back(mag);
 		vec_phi.push_back(phi);
-		std::cout << "coefficient Res #" << (i+2)/2 << ":  " << mag << "       " << phi << endl;
+		vec_mag_err.push_back(mag_err);
+		vec_phi_err.push_back(phi_err);
+		std::cout << "coefficient Res #" << (i+2)/2 << ":  " << mag << " +- " << mag_err << "       " << phi << " +- " << phi_err << endl;
+//		std::cout << "coefficient Res #" << (i+2)/2 << ":  " << mag <<  "       " << phi << endl;
 	}
 }
 
