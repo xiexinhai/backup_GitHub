@@ -1,0 +1,13 @@
+scp xiexh@162.105.151.178:~/GooFit/src/PDFs/physics/Amp3Body.cu ./     
+scp xiexh@162.105.151.178:~/GooFit/include/goofit/PDFs/physics/Amp3Body.h ./
+scp xiexh@162.105.151.178:~/GooFit/src/goofit/FitManagerMinuit2.cpp ./
+scp xiexh@162.105.151.178:~/GooFit/include/goofit/fitting/FitManagerMinuit2.h ./
+scp xiexh@162.105.151.178:~/GooFit/src/PDFs/physics/resonances/LASS.cu ./
+scp xiexh@162.105.151.178:~/GooFit/src/PDFs/physics/resonances/FLATTE.cu ./
+scp xiexh@162.105.151.178:~/GooFit/src/PDFs/MetricTaker.cu ./
+scp xiexh@162.105.151.178:~/GooFit/src/goofit/Params.cpp ./
+scp xiexh@162.105.151.178:~/GooFit/include/goofit/fitting/Params.h ./
+scp xiexh@162.105.151.178:~/GooFit/src/PDFs/physics/resonances/RBW.cu ./
+scp xiexh@162.105.151.178:~/GooFit/src/PDFs/physics/detail/SpecialResonanceIntegrator.cu ./
+scp xiexh@162.105.151.178:~/GooFit/include/goofit/PDFs/physics/detail/SpecialResonanceIntegrator.h ./
+scp xiexh@162.105.151.178:~/GooFit/examples/dalitz/dalitz.cpp                                         ./ 
