@@ -48,6 +48,10 @@ class FitManagerMinuit2 {
     /// For fit errors calculation by xxh
     
     void printCovMat();
+    double dpda(double, double);
+    double dpdb(double, double);
+    double dmda(double, double);
+    double dmdb(double, double);
 
     void printParams();
 
