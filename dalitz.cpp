@@ -92,7 +92,7 @@ const fptype m13_upper = (_mDp-KpMass)*(_mDp-KpMass);
 const fptype m23_lower = (KsMass+KpMass)*(KsMass+KpMass);
 const fptype m23_upper = (_mDp-pi0Mass)*(_mDp-pi0Mass);
 
-bool m_draw_data = true;
+bool m_draw_data = false;
 bool m_effPoly = false;
 
 bool m_float_init = false;
@@ -105,6 +105,7 @@ bool m_test_pdf = false;
 bool m_fit_data = true;
 bool m_fit_use_eff = true;
 
+bool m_print_for_sys = true;
 
 const fptype dE_min = -0.03;
 const fptype dE_max = 0.02;
@@ -123,8 +124,8 @@ std::string eff_filename="weighted_acceptance_bin150.root";
 //std::string eff_filename="weighted_acceptance_Mrec_mius.root";
 
 
-//std::string data_filename = "data_tagAll.root";
-std::string data_filename = "tagAll_DIY.root";
+std::string data_filename = "data_tagAll.root";
+//std::string data_filename = "tagAll_DIY.root";
 
 TRandom3 rnd;
 
@@ -1124,7 +1125,7 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 
 	cout << fixed << setprecision(8);
 
-	datapdf->printParams();
+	std::vector <std::vector<double>> vec_phi = datapdf->printParams();
 
 	//fit fractions
 	vector <vector<fptype>> fracMat;
@@ -1152,11 +1153,11 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 		m12.setNumBins(drawBinM12);
 		m13.setNumBins(drawBinM13);
 
-		datapdf->printCovMat();
+//		datapdf->printCovMat();
 		ProdPdf prodpdf{"prodpdf", {signal}};
 	
 		DalitzPlotter plotter(&prodpdf, signal);
-		datapdf->printCovMat();
+//		datapdf->printCovMat();
  
 		TH2F *dalitzplot = plotter.make2D();
 		dalitzplot->SetTitle("dalitzFit");
@@ -1196,63 +1197,63 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 		}
 
 		//for resonances distribution 
-		vector<PdfBase*> comps;
-		comps.clear();
-		comps.push_back(signal);
-		ProdPdf* sigtemp = new ProdPdf("signal_temp", comps);
-//		GooPdf * sigtemp = (GooPdf *) signal;
-
-		std::vector<Observable> vars;
-		vars.push_back(m12);
-		vars.push_back(m13);
-		vars.push_back(eventNumber); 
-		UnbinnedDataSet currData(vars); 
-	
-		int evtCounter = 0; 
-		for (int i = 0; i < m12.getNumBins(); ++i) {
-			m12.setValue(m12.getLowerLimit() + (m12.getUpperLimit() - m12.getLowerLimit())*(i + 0.5) / m12.getNumBins()); 
-			for (int j = 0; j < m13.getNumBins(); ++j) {
-				m13.setValue(m13.getLowerLimit()+ (m13.getUpperLimit()- m13.getLowerLimit())*(j + 0.5) / m13.getNumBins()); 
-		
-		          if (!cpuDalitz(m12.getValue(), m13.getValue())) continue;
-		          eventNumber.setValue(evtCounter); 
-		          evtCounter++;
-		          currData.addEvent(); 
-			}
-		}
-		sigtemp->setData(&currData);
-		std::vector<std::vector<fptype>> pdfValues;
-		pdfValues = sigtemp->getCompProbsAtDataPoints();
-
-		const int nRes = pdfValues.size();
-		cout << "num of nRes = " << nRes << endl;
-		TH1F* m12_pdf_hist_res[nRes];
-		TH1F* m13_pdf_hist_res[nRes];
-		TH1F* m23_pdf_hist_res[nRes];
-		for (int i=0;i<nRes;i++){
-			sprintf(strbuffer, "%s_res%d", m12_pdf_hist.GetName(), i);
-			m12_pdf_hist_res[i] = (TH1F*)m12_pdf_hist.Clone(strbuffer);
-			m12_pdf_hist_res[i]->Reset();
-
-			sprintf(strbuffer, "%s_res%d", m13_pdf_hist.GetName(), i);
-			m13_pdf_hist_res[i] = (TH1F*)m13_pdf_hist.Clone(strbuffer);
-			m13_pdf_hist_res[i]->Reset();
-
-			sprintf(strbuffer, "%s_res%d", m23_pdf_hist.GetName(), i);
-			m23_pdf_hist_res[i] = (TH1F*)m23_pdf_hist.Clone(strbuffer);
-			m23_pdf_hist_res[i]->Reset();
-		}
-		 for (unsigned int j = 0; j < pdfValues[0].size(); ++j) {
-			double currm12 = currData.getValue(m12, j);
-			double currm13 = currData.getValue(m13, j);
-			double currm23 = cpuGetM23(currm12, currm13);
-			for (int i=0;i<nRes;i++){
-				m12_pdf_hist_res[i]->Fill(currm12, pdfValues[i][j]);
-				m13_pdf_hist_res[i]->Fill(currm13, pdfValues[i][j]);
-				m23_pdf_hist_res[i]->Fill(currm23, pdfValues[i][j]);
-//				cout<<"For Res #"<<i<<", "<<j<<": "<<currm12<<','<<currm13<<": "<<pdfValues[i][j]<<endl;
-			}
-		}
+//		vector<PdfBase*> comps;
+//		comps.clear();
+//		comps.push_back(signal);
+//		ProdPdf* sigtemp = new ProdPdf("signal_temp", comps);
+////		GooPdf * sigtemp = (GooPdf *) signal;
+//
+//		std::vector<Observable> vars;
+//		vars.push_back(m12);
+//		vars.push_back(m13);
+//		vars.push_back(eventNumber); 
+//		UnbinnedDataSet currData(vars); 
+//	
+//		int evtCounter = 0; 
+//		for (int i = 0; i < m12.getNumBins(); ++i) {
+//			m12.setValue(m12.getLowerLimit() + (m12.getUpperLimit() - m12.getLowerLimit())*(i + 0.5) / m12.getNumBins()); 
+//			for (int j = 0; j < m13.getNumBins(); ++j) {
+//				m13.setValue(m13.getLowerLimit()+ (m13.getUpperLimit()- m13.getLowerLimit())*(j + 0.5) / m13.getNumBins()); 
+//		
+//		          if (!cpuDalitz(m12.getValue(), m13.getValue())) continue;
+//		          eventNumber.setValue(evtCounter); 
+//		          evtCounter++;
+//		          currData.addEvent(); 
+//			}
+//		}
+//		sigtemp->setData(&currData);
+//		std::vector<std::vector<fptype>> pdfValues;
+//		pdfValues = sigtemp->getCompProbsAtDataPoints();
+//
+//		const int nRes = pdfValues.size();
+//		cout << "num of nRes = " << nRes << endl;
+//		TH1F* m12_pdf_hist_res[nRes];
+//		TH1F* m13_pdf_hist_res[nRes];
+//		TH1F* m23_pdf_hist_res[nRes];
+//		for (int i=0;i<nRes;i++){
+//			sprintf(strbuffer, "%s_res%d", m12_pdf_hist.GetName(), i);
+//			m12_pdf_hist_res[i] = (TH1F*)m12_pdf_hist.Clone(strbuffer);
+//			m12_pdf_hist_res[i]->Reset();
+//
+//			sprintf(strbuffer, "%s_res%d", m13_pdf_hist.GetName(), i);
+//			m13_pdf_hist_res[i] = (TH1F*)m13_pdf_hist.Clone(strbuffer);
+//			m13_pdf_hist_res[i]->Reset();
+//
+//			sprintf(strbuffer, "%s_res%d", m23_pdf_hist.GetName(), i);
+//			m23_pdf_hist_res[i] = (TH1F*)m23_pdf_hist.Clone(strbuffer);
+//			m23_pdf_hist_res[i]->Reset();
+//		}
+//		 for (unsigned int j = 0; j < pdfValues[0].size(); ++j) {
+//			double currm12 = currData.getValue(m12, j);
+//			double currm13 = currData.getValue(m13, j);
+//			double currm23 = cpuGetM23(currm12, currm13);
+//			for (int i=0;i<nRes;i++){
+//				m12_pdf_hist_res[i]->Fill(currm12, pdfValues[i][j]);
+//				m13_pdf_hist_res[i]->Fill(currm13, pdfValues[i][j]);
+//				m23_pdf_hist_res[i]->Fill(currm23, pdfValues[i][j]);
+////				cout<<"For Res #"<<i<<", "<<j<<": "<<currm12<<','<<currm13<<": "<<pdfValues[i][j]<<endl;
+//			}
+//		}
 
 
 		//for data comparison
@@ -1516,14 +1517,21 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 		fptype fraction_rate = (fracList[0]/0.333) / (fracList[1]/0.3323/0.5);
 		fptype fraction_rate_err = hRate->GetRMS();
 	
-	//	fraction_rate *= 0.3323*0.5/0.3330;
-	//	fraction_rate_err *= 0.3323*0.5/0.3330;
-	
 		froot->Close();
 		std::cout << std::endl;
 		for (int ii=0;ii<num_res;ii++) 
 			std::cout<<"Fit fraction for #"<<ii<<": "<<fracList[ii]<< " +- "<<errList[ii]<<std::endl;
 		std::cout<<"Fit fraction for K*(892)+ / Kbar*(892)0 rate: " << fraction_rate << " +- " << fraction_rate_err << std::endl;
+
+		if(m_print_for_sys){
+			cout << "tempsys" << endl;
+			cout << vec_phi[0][0] << endl;
+			cout << vec_phi[1][0] << endl;
+			cout << fracList[0] << endl;
+			cout << errList[0] << endl;
+			cout << fracList[1] << endl;
+			cout << errList[1] << endl;
+		}
 	}
 
 	delete datapdf;
