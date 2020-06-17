@@ -114,7 +114,7 @@ double FitManagerMinuit2::dpdb(double a, double b)
 	return ret;
 }
 
-void FitManagerMinuit2::printParams()
+std::vector <std::vector<double>> FitManagerMinuit2::printParams()
 {
 //	std::cout << std::endl << pdfPointer->getParameters() << std::endl;
 
@@ -165,6 +165,11 @@ void FitManagerMinuit2::printParams()
 		std::cout << "coefficient Res #" << (i+2)/2 << ":  " << mag << " +- " << mag_err << "       " << phi << " +- " << phi_err << endl;
 //		std::cout << "coefficient Res #" << (i+2)/2 << ":  " << mag <<  "       " << phi << endl;
 	}
+
+	std::vector <std::vector<double>> ret; ret.clear();
+	ret.push_back(vec_phi);
+	ret.push_back(vec_phi_err);
+	return ret;
 }
 
 
