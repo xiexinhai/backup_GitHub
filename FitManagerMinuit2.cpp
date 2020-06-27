@@ -114,6 +114,20 @@ double FitManagerMinuit2::dpdb(double a, double b)
 	return ret;
 }
 
+void FitManagerMinuit2::printOriginalParams()
+{
+	std::vector<Variable> vec_vars = pdfPointer->getParameters();
+//	std::vector<double> floatVarVal, floatVarErr;
+//	floatVarVal.clear();floatVarErr.clear();
+	for(Variable &var : vec_vars) {
+		if (var.IsFixed()) continue;
+//		floatVarVal.push_back(var.getValue());
+//		floatVarErr.push_back(var.getError());
+		std::cout << var.getValue() << std::endl;
+		std::cout << var.getError() << std::endl;
+	}
+}
+
 std::vector <std::vector<double>> FitManagerMinuit2::printParams()
 {
 //	std::cout << std::endl << pdfPointer->getParameters() << std::endl;
