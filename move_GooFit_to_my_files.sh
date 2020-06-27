@@ -1,0 +1,14 @@
+cp ~/GooFit/src/PDFs/physics/Amp3Body.cu                                       ~/backup_GitHub/Amp3Body.cu
+cp ~/GooFit/include/goofit/PDFs/physics/Amp3Body.h                             ~/backup_GitHub/Amp3Body.h
+cp ~/GooFit/src/goofit/FitManagerMinuit2.cpp                                   ~/backup_GitHub/FitManagerMinuit2.cpp
+cp ~/GooFit/include/goofit/fitting/FitManagerMinuit2.h                         ~/backup_GitHub/FitManagerMinuit2.h
+cp ~/GooFit/src/PDFs/physics/resonances/LASS.cu                                ~/backup_GitHub/LASS.cu
+cp ~/GooFit/src/PDFs/physics/resonances/FLATTE.cu                              ~/backup_GitHub/FLATTE.cu
+cp ~/GooFit/src/PDFs/MetricTaker.cu                                            ~/backup_GitHub/MetricTaker.cu
+cp ~/GooFit/src/PDFs/GooPdf.cu                                                 ~/backup_GitHub/GooPdf.cu
+cp ~/GooFit/src/goofit/Params.cpp                                              ~/backup_GitHub/Params.cpp
+cp ~/GooFit/include/goofit/fitting/Params.h                                    ~/backup_GitHub/Params.h
+cp ~/GooFit/src/PDFs/physics/resonances/RBW.cu                                 ~/backup_GitHub/RBW.cu
+cp ~/GooFit/src/PDFs/physics/detail/SpecialResonanceIntegrator.cu              ~/backup_GitHub/SpecialResonanceIntegrator.cu
+cp ~/GooFit/include/goofit/PDFs/physics/detail/SpecialResonanceIntegrator.h    ~/backup_GitHub/SpecialResonanceIntegrator.h
+cp ~/GooFit/examples/dalitz/dalitz.cpp                                         ~/backup_GitHub/dalitz.cpp
