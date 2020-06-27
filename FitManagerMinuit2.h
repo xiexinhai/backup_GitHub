@@ -54,6 +54,7 @@ class FitManagerMinuit2 {
     double dmdb(double, double);
 
     std::vector <std::vector<double>> printParams();
+    void printOriginalParams();
 
     void setRandMinuitValues (const int nSamples);
 
