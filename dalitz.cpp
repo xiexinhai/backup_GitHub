@@ -92,7 +92,7 @@ const fptype m13_upper = (_mDp-KpMass)*(_mDp-KpMass);
 const fptype m23_lower = (KsMass+KpMass)*(KsMass+KpMass);
 const fptype m23_upper = (_mDp-pi0Mass)*(_mDp-pi0Mass);
 
-bool m_draw_data = false;
+bool m_draw_data = true;
 bool m_effPoly = false;
 
 bool m_float_init = false;
@@ -102,9 +102,11 @@ bool m_draw_polyeff = false;
 bool m_draw_smootheff = false;
 
 bool m_test_pdf = false;
+
 bool m_fit_data = true;
 bool m_fit_use_eff = true;
 
+bool m_test_for_pull = true;
 bool m_print_for_sys = true;
 
 const fptype dE_min = -0.03;
@@ -130,7 +132,7 @@ std::string data_filename = "data_tagAll.root";
 TRandom3 rnd;
 
 void makeEffPlot(GooPdf* total, UnbinnedDataSet* data);
-void saveToy(Amp3Body *signal, Observable &m12, Observable &m13, EventNumber &eventNumber);
+void saveToy(Amp3Body *signal, Observable &m12, Observable &m13, EventNumber &eventNumber,int,int);
 // Constants used in more than one PDF component.
 Variable motherM("motherM", _mDp);
 Variable chargeM("chargeM", KpMass);
@@ -181,6 +183,185 @@ bool cpuDalitz (fptype m12, fptype m13, fptype bigM = _mDp, fptype dm1 = pi0Mass
 //  return false; 
   return true;
 }
+
+struct BigBin {
+	int xbin;
+	int ybin;
+	int width;
+	int height; 
+	double getContent (const TH2F* plot); 
+};
+
+double BigBin::getContent (const TH2F* plot) {
+	double ret = 0;
+	//std::cout << "getContent with " << width << " " << height << " " << xbin << " " << ybin <<std::endl;
+	for (unsigned int i = 0; i < width; ++i) {
+		for (unsigned int j = 0; j < height; ++j) {
+			//std::cout << i << ", " << j << std::endl; 
+			if (xbin+i > plot->GetNbinsX()) continue;
+			if (ybin+j > plot->GetNbinsY()) continue;
+			ret += plot->GetBinContent(xbin+i, ybin+j);
+		}
+	}
+	//std::cout << "Total " << ret << std::endl; 
+	return ret;
+}
+
+struct ChisqInfo {
+	ChisqInfo (); 
+	double chisq;
+	int dof;
+	TH2F* contribPlot; 
+};
+
+ChisqInfo::ChisqInfo () 
+	: chisq(0), dof(0), contribPlot(0)
+{}
+
+ChisqInfo* getAdaptiveChisquare (const TH2F* datPlot, const TH2F* pdfPlot, bool useLH = false) {
+	bool acceptable = false;
+	int binSize = 1; 
+	vector<BigBin> binlist;
+	double limit = 0; 
+	while (!acceptable) {
+		binlist.clear();
+		std::cout << "Attempting bin generation with size " << binSize << std::endl; 
+	
+		for (int xbin = 1; xbin <= datPlot->GetNbinsX(); xbin += binSize) {
+			for (int ybin = 1; ybin <= datPlot->GetNbinsY(); ybin += binSize) {
+				double lox = datPlot->GetXaxis()->GetBinLowEdge(xbin+0);
+				double hix = datPlot->GetXaxis()->GetBinLowEdge(xbin+1+binSize);
+				double loy = datPlot->GetYaxis()->GetBinLowEdge(ybin+0);
+				double hiy = datPlot->GetYaxis()->GetBinLowEdge(ybin+1+binSize);
+				bool corner = false; 
+				if      (cpuDalitz(lox, loy)&&((!useLH)||(lox < loy))) corner = true;
+				else if (cpuDalitz(lox, hiy)&&((!useLH)||(lox < hiy))) corner = true;
+				else if (cpuDalitz(hix, loy)&&((!useLH)||(hix < loy))) corner = true;
+				else if (cpuDalitz(hix, hiy)&&((!useLH)||(hix < hiy))) corner = true;
+				if (!corner) continue; 
+			
+				BigBin curr; 
+				curr.xbin = xbin;
+				curr.ybin = ybin;
+				curr.width = curr.height = binSize;
+				binlist.push_back(curr); 
+			}
+		}
+	    
+		acceptable = true;
+		for (vector<BigBin>::iterator bin = binlist.begin(); bin != binlist.end(); ++bin) {
+			if ((*bin).getContent(datPlot) > limit) continue; 
+			acceptable = false;
+			binSize *= 2; 
+			std::cout << "Couldn't get good bins, retry.\n"; 
+			break;
+		}
+	}
+
+	std::cout << "Good bins at size " << binSize << ", beginning splits.\n";
+
+	// Now attempt to split bins. 
+	int numSplits = 1;
+	while (0 < numSplits) {
+	numSplits = 0; 
+	vector<BigBin> newbins; 
+	for (vector<BigBin>::iterator bin = binlist.begin(); bin != binlist.end(); ++bin) {
+		if (1 == (*bin).width*(*bin).height) {
+			newbins.push_back(*bin); 
+			continue;
+      	}
+	      BigBin lolef;
+	      BigBin lorig;
+	      BigBin hilef;
+	      BigBin hirig;
+	      lolef.xbin = (*bin).xbin;
+	      hilef.xbin = (*bin).xbin;
+	      lorig.xbin = (*bin).xbin + (*bin).width/2;
+	      hirig.xbin = (*bin).xbin + (*bin).width/2;
+	      lolef.ybin = (*bin).ybin;
+	      hilef.ybin = (*bin).ybin + (*bin).height/2;
+	      lorig.ybin = (*bin).ybin;
+	      hirig.ybin = (*bin).ybin + (*bin).height/2;
+	
+	      lolef.width =  (*bin).width/2;
+	      lorig.width =  (*bin).width/2;
+	      hilef.width =  (*bin).width/2;
+	      hirig.width =  (*bin).width/2;
+	      lolef.height =  (*bin).height/2;
+	      lorig.height =  (*bin).height/2;
+	      hilef.height =  (*bin).height/2;
+	      hirig.height =  (*bin).height/2;
+	      
+	      int mask = 0;
+	      if (limit < lolef.getContent(datPlot)) mask += 1;
+	      if (limit < lorig.getContent(datPlot)) mask += 2;
+	      if (limit < hilef.getContent(datPlot)) mask += 4;
+	      if (limit < hirig.getContent(datPlot)) mask += 8;
+	
+	      if (mask != 15) {
+		newbins.push_back(*bin);
+	      }
+	      else {
+		newbins.push_back(lolef);
+		newbins.push_back(lorig);
+		newbins.push_back(hilef);
+		newbins.push_back(hirig);
+		numSplits++; 
+	      }
+    }
+    binlist.clear(); 
+    for (vector<BigBin>::iterator i = newbins.begin(); i != newbins.end(); ++i) binlist.push_back(*i); 
+    std::cout << "Split " << numSplits << " bins.\n"; 
+  }
+
+  ChisqInfo* ret = new ChisqInfo(); 
+  ret->dof = binlist.size(); 
+  ret->contribPlot = new TH2F("contribPlot", "", 
+			      datPlot->GetNbinsX(), 
+			      datPlot->GetXaxis()->GetBinLowEdge(1),
+			      datPlot->GetXaxis()->GetBinLowEdge(datPlot->GetNbinsX() + 1),
+			      datPlot->GetNbinsY(), 
+			      datPlot->GetYaxis()->GetBinLowEdge(1),
+			      datPlot->GetYaxis()->GetBinLowEdge(datPlot->GetNbinsY() + 1));
+
+  double totalDat = 0;
+  double totalPdf = 0; 
+  for (vector<BigBin>::iterator bin = binlist.begin(); bin != binlist.end(); ++bin) {
+    double dat = (*bin).getContent(datPlot);
+    double pdf = (*bin).getContent(pdfPlot);
+//    double term = (dat - pdf) / sqrt(dat); 
+    double term = (dat - pdf) / sqrt(pdf); 
+    ret->chisq += term*term; 
+    /*
+    std::cout << "Bin (" << (*bin).xbin << ", " << (*bin).ybin << ") " 
+	      << (*bin).width << " " << (*bin).height << " : " 
+	      << dat << " " << pdf << " " 
+	      << term << std::endl; 
+    */
+    for (int i = 0; i < (*bin).width; ++i) {
+      for (int j = 0; j < (*bin).height; ++j) {
+	ret->contribPlot->SetBinContent((*bin).xbin + i, (*bin).ybin + j, 0); 
+	bool corner = false; 
+	double lox = datPlot->GetXaxis()->GetBinLowEdge((*bin).xbin+i);
+	double hix = datPlot->GetXaxis()->GetBinLowEdge((*bin).xbin+i+1); 
+	double loy = datPlot->GetYaxis()->GetBinLowEdge((*bin).ybin+j);
+	double hiy = datPlot->GetYaxis()->GetBinLowEdge((*bin).ybin+j+1);
+	if      (cpuDalitz(lox, loy)&&((!useLH)||(lox < loy))) corner = true;
+	else if (cpuDalitz(lox, hiy)&&((!useLH)||(lox < hiy))) corner = true;
+	else if (cpuDalitz(hix, loy)&&((!useLH)||(hix < loy))) corner = true;
+	else if (cpuDalitz(hix, hiy)&&((!useLH)||(hix < hiy))) corner = true;
+	if (!corner) continue; 
+
+	ret->contribPlot->SetBinContent((*bin).xbin + i, (*bin).ybin + j, term); 
+      }
+    }
+    totalPdf += pdf;
+    totalDat += dat;
+  }
+
+  return ret;
+}
+
 
 double calWeight(double xmin, double xmax, double ymin, double ymax, TRandom3 &r){
      double m12, m13;
@@ -805,8 +986,8 @@ void makeEffPlot(GooPdf* total, UnbinnedDataSet* data){
                     m13.getNumBins(),
                     m13.getLowerLimit(),
                     m13.getUpperLimit());
-	effpdfplot->GetXaxis()->SetTitle("M^{2}(K^{+}#pi^{0}) (GeV^{2}/c^{4})");
-	effpdfplot->GetYaxis()->SetTitle("M^{2}(K_{S}^{0}#pi^{0}) (GeV^{2}/c^{4})");
+	effpdfplot->GetXaxis()->SetTitle("M^{2}_{K^{+}#pi^{0}} (GeV^{2}/c^{4})");
+	effpdfplot->GetYaxis()->SetTitle("M^{2}_{K_{S}^{0}#pi^{0}) (GeV^{2}/c^{4})");
 
 	TH1F m12_pdf_hist("m12_pdf_hist", "", m12.getNumBins(), m12.getLowerLimit(), m12.getUpperLimit());
 	m12_pdf_hist.SetStats(false); 
@@ -832,8 +1013,8 @@ void makeEffPlot(GooPdf* total, UnbinnedDataSet* data){
                     m13.getNumBins(),
                     m13.getLowerLimit(),
                     m13.getUpperLimit());
-	effplot->GetXaxis()->SetTitle("M^{2}(K^{+}#pi^{0}) (GeV^{2}/c^{4})");
-	effplot->GetYaxis()->SetTitle("M^{2}(K_{S}^{0}#pi^{0}) (GeV^{2}/c^{4})");
+	effplot->GetXaxis()->SetTitle("M^{2}_{K^{+}#pi^{0}} (GeV^{2}/c^{4})");
+	effplot->GetYaxis()->SetTitle("M^{2}_{K_{S}^{0}#pi^{0}} (GeV^{2}/c^{4})");
 
 
 	TH1F *m12_data = new TH1F("m12_data","", m12.getNumBins(), m12.getLowerLimit(), m12.getUpperLimit());
@@ -841,7 +1022,7 @@ void makeEffPlot(GooPdf* total, UnbinnedDataSet* data){
 	m12_data->SetMarkerSize(0.6);
 	m12_data->SetLineWidth(2);
 	m12_data->GetYaxis()->SetTitle("Efficiency");
-	m12_data->GetXaxis()->SetTitle("M^{2}(K^{+}#pi^{0}) (GeV^{2}/c^{4})");
+	m12_data->GetXaxis()->SetTitle("M^{2}_{K^{+}#pi^{0}} (GeV^{2}/c^{4})");
 	m12_data->SetLineColor(1);
 	
 	TH1F *m13_data = new TH1F("m13_data","", m13.getNumBins(), m13.getLowerLimit(), m13.getUpperLimit());
@@ -849,7 +1030,7 @@ void makeEffPlot(GooPdf* total, UnbinnedDataSet* data){
 	m13_data->SetMarkerSize(0.6);
 	m13_data->SetLineWidth(2);
 	m13_data->GetYaxis()->SetTitle("Efficiency");
-	m13_data->GetXaxis()->SetTitle("M^{2}(K_{S}^{0}#pi^{0}) (GeV^{2}/c^{4})");
+	m13_data->GetXaxis()->SetTitle("M^{2}_{K_{S}^{0}#pi^{0}} (GeV^{2}/c^{4})");
 	m13_data->SetLineColor(1);
 	
 	TH1F *m23_data = new TH1F("m23_data","", m12.getNumBins(), getM23LowerLimit(m12,m13), getM23UpperLimit(m12,m13));
@@ -858,7 +1039,7 @@ void makeEffPlot(GooPdf* total, UnbinnedDataSet* data){
 	m23_data->SetMarkerSize(0.6);
 	m23_data->SetLineWidth(2);
 	m23_data->GetYaxis()->SetTitle("Efficiency");
-	m23_data->GetXaxis()->SetTitle("M^{2}(K^{+}K_{S}^{0}) (GeV^{2}/c^{4})");
+	m23_data->GetXaxis()->SetTitle("M^{2}_{K^{+}K_{S}^{0}} (GeV^{2}/c^{4})");
 	m23_data->SetLineColor(1);
 
 
@@ -995,8 +1176,8 @@ void makeEffPlot(GooPdf* total, UnbinnedDataSet* data){
 	TH2F *pull = new TH2F("Pull","Pull Distribution",
 		effplot->GetNbinsX(), effplot->GetXaxis()->GetXmin(), effplot->GetXaxis()->GetXmax(),
 		effplot->GetNbinsY(), effplot->GetYaxis()->GetXmin(), effplot->GetYaxis()->GetXmax());
-	pull->GetXaxis()->SetTitle("M^{2}(K^{+}#pi^{0}) (GeV^{2}/c^{4})");
-	pull->GetYaxis()->SetTitle("M^{2}(K_{S}^{0}#pi^{0}) (GeV^{2}/c^{4})");
+	pull->GetXaxis()->SetTitle("M^{2}_{K^{+}#pi^{0}} (GeV^{2}/c^{4})");
+	pull->GetYaxis()->SetTitle("M^{2}_{K_{S}^{0}#pi^{0}} (GeV^{2}/c^{4})");
 
 	effplot->Rebin2D(2,2);
 	effpdfplot->Rebin2D(2,2);
@@ -1161,8 +1342,8 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
  
 		TH2F *dalitzplot = plotter.make2D();
 		dalitzplot->SetTitle("dalitzFit");
-		dalitzplot->GetXaxis()->SetTitle("M^{2}(K^{+}#pi^{0}) (GeV^{2}/c^{4})");
-		dalitzplot->GetYaxis()->SetTitle("M^{2}(K_{S}^{0}#pi^{0}) (GeV^{2}/c^{4})");
+		dalitzplot->GetXaxis()->SetTitle("M^{2}_{K^{+}#pi^{0}} (GeV^{2}/c^{4})");
+		dalitzplot->GetYaxis()->SetTitle("M^{2}_{K_{S}^{0}#pi^{0}} (GeV^{2}/c^{4})");
 	
 		TH1F m12_pdf_hist("m12_pdf_hist", "", m12.getNumBins(), m12.getLowerLimit(), m12.getUpperLimit());
 		m12_pdf_hist.SetStats(false); 
@@ -1196,96 +1377,97 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 			m23_pdf_hist.Fill(m23_tmp);
 		}
 
-		//for resonances distribution 
-//		vector<PdfBase*> comps;
-//		comps.clear();
-//		comps.push_back(signal);
-//		ProdPdf* sigtemp = new ProdPdf("signal_temp", comps);
-////		GooPdf * sigtemp = (GooPdf *) signal;
-//
-//		std::vector<Observable> vars;
-//		vars.push_back(m12);
-//		vars.push_back(m13);
-//		vars.push_back(eventNumber); 
-//		UnbinnedDataSet currData(vars); 
-//	
-//		int evtCounter = 0; 
-//		for (int i = 0; i < m12.getNumBins(); ++i) {
-//			m12.setValue(m12.getLowerLimit() + (m12.getUpperLimit() - m12.getLowerLimit())*(i + 0.5) / m12.getNumBins()); 
-//			for (int j = 0; j < m13.getNumBins(); ++j) {
-//				m13.setValue(m13.getLowerLimit()+ (m13.getUpperLimit()- m13.getLowerLimit())*(j + 0.5) / m13.getNumBins()); 
-//		
-//		          if (!cpuDalitz(m12.getValue(), m13.getValue())) continue;
-//		          eventNumber.setValue(evtCounter); 
-//		          evtCounter++;
-//		          currData.addEvent(); 
-//			}
-//		}
-//		sigtemp->setData(&currData);
-//		std::vector<std::vector<fptype>> pdfValues;
-//		pdfValues = sigtemp->getCompProbsAtDataPoints();
-//
-//		const int nRes = pdfValues.size();
-//		cout << "num of nRes = " << nRes << endl;
-//		TH1F* m12_pdf_hist_res[nRes];
-//		TH1F* m13_pdf_hist_res[nRes];
-//		TH1F* m23_pdf_hist_res[nRes];
-//		for (int i=0;i<nRes;i++){
-//			sprintf(strbuffer, "%s_res%d", m12_pdf_hist.GetName(), i);
-//			m12_pdf_hist_res[i] = (TH1F*)m12_pdf_hist.Clone(strbuffer);
-//			m12_pdf_hist_res[i]->Reset();
-//
-//			sprintf(strbuffer, "%s_res%d", m13_pdf_hist.GetName(), i);
-//			m13_pdf_hist_res[i] = (TH1F*)m13_pdf_hist.Clone(strbuffer);
-//			m13_pdf_hist_res[i]->Reset();
-//
-//			sprintf(strbuffer, "%s_res%d", m23_pdf_hist.GetName(), i);
-//			m23_pdf_hist_res[i] = (TH1F*)m23_pdf_hist.Clone(strbuffer);
-//			m23_pdf_hist_res[i]->Reset();
-//		}
-//		 for (unsigned int j = 0; j < pdfValues[0].size(); ++j) {
-//			double currm12 = currData.getValue(m12, j);
-//			double currm13 = currData.getValue(m13, j);
-//			double currm23 = cpuGetM23(currm12, currm13);
-//			for (int i=0;i<nRes;i++){
-//				m12_pdf_hist_res[i]->Fill(currm12, pdfValues[i][j]);
-//				m13_pdf_hist_res[i]->Fill(currm13, pdfValues[i][j]);
-//				m23_pdf_hist_res[i]->Fill(currm23, pdfValues[i][j]);
-////				cout<<"For Res #"<<i<<", "<<j<<": "<<currm12<<','<<currm13<<": "<<pdfValues[i][j]<<endl;
-//			}
-//		}
+/*
+		//trial for resonances distribution 
+		vector<PdfBase*> comps;
+		comps.clear();
+		comps.push_back(signal);
+		ProdPdf* sigtemp = new ProdPdf("signal_temp", comps);
+//		GooPdf * sigtemp = (GooPdf *) signal;
 
+		std::vector<Observable> vars;
+		vars.push_back(m12);
+		vars.push_back(m13);
+		vars.push_back(eventNumber); 
+		UnbinnedDataSet currData(vars); 
+	
+		int evtCounter = 0; 
+		for (int i = 0; i < m12.getNumBins(); ++i) {
+			m12.setValue(m12.getLowerLimit() + (m12.getUpperLimit() - m12.getLowerLimit())*(i + 0.5) / m12.getNumBins()); 
+			for (int j = 0; j < m13.getNumBins(); ++j) {
+				m13.setValue(m13.getLowerLimit()+ (m13.getUpperLimit()- m13.getLowerLimit())*(j + 0.5) / m13.getNumBins()); 
+		
+		          if (!cpuDalitz(m12.getValue(), m13.getValue())) continue;
+		          eventNumber.setValue(evtCounter); 
+		          evtCounter++;
+		          currData.addEvent(); 
+			}
+		}
+		sigtemp->setData(&currData);
+		std::vector<std::vector<fptype>> pdfValues;
+		pdfValues = sigtemp->getCompProbsAtDataPoints();
+
+		const int nRes = pdfValues.size();
+		cout << "num of nRes = " << nRes << endl;
+		TH1F* m12_pdf_hist_res[nRes];
+		TH1F* m13_pdf_hist_res[nRes];
+		TH1F* m23_pdf_hist_res[nRes];
+		for (int i=0;i<nRes;i++){
+			sprintf(strbuffer, "%s_res%d", m12_pdf_hist.GetName(), i);
+			m12_pdf_hist_res[i] = (TH1F*)m12_pdf_hist.Clone(strbuffer);
+			m12_pdf_hist_res[i]->Reset();
+
+			sprintf(strbuffer, "%s_res%d", m13_pdf_hist.GetName(), i);
+			m13_pdf_hist_res[i] = (TH1F*)m13_pdf_hist.Clone(strbuffer);
+			m13_pdf_hist_res[i]->Reset();
+
+			sprintf(strbuffer, "%s_res%d", m23_pdf_hist.GetName(), i);
+			m23_pdf_hist_res[i] = (TH1F*)m23_pdf_hist.Clone(strbuffer);
+			m23_pdf_hist_res[i]->Reset();
+		}
+		 for (unsigned int j = 0; j < pdfValues[0].size(); ++j) {
+			double currm12 = currData.getValue(m12, j);
+			double currm13 = currData.getValue(m13, j);
+			double currm23 = cpuGetM23(currm12, currm13);
+			for (int i=0;i<nRes;i++){
+				m12_pdf_hist_res[i]->Fill(currm12, pdfValues[i][j]);
+				m13_pdf_hist_res[i]->Fill(currm13, pdfValues[i][j]);
+				m23_pdf_hist_res[i]->Fill(currm23, pdfValues[i][j]);
+//				cout<<"For Res #"<<i<<", "<<j<<": "<<currm12<<','<<currm13<<": "<<pdfValues[i][j]<<endl;
+			}
+		}
+*/
 
 		//for data comparison
 		TString a("Events/"); TString c(" GeV^{2}/c^{4})");
 		TH1F *m12_data = new TH1F("m12_data","", m12.getNumBins(), m12.getLowerLimit(), m12.getUpperLimit());
-		char b_m12[20];  sprintf(b_m12, "(%.2f",(m12.getUpperLimit()-m12.getLowerLimit())/m12.getNumBins()*2);//Rebin(2) later
+		char b_m12[20];  sprintf(b_m12, "(%.2f",(m12.getUpperLimit()-m12.getLowerLimit())/m12.getNumBins()*2);//Rebin() later
 		TString ytitle_m12 = a + b_m12 + c;
 		m12_data->SetMarkerStyle(20);
 		m12_data->SetMarkerSize(0.6);
 		m12_data->SetLineWidth(2);
 		m12_data->GetYaxis()->SetTitle(ytitle_m12);
-		m12_data->GetXaxis()->SetTitle("M^{2}(K^{+}#pi^{0}) (GeV^{2}/c^{4})");
+		m12_data->GetXaxis()->SetTitle("M^{2}_{K^{+}#pi^{0}} (GeV^{2}/c^{4})");
 		m12_data->SetLineColor(1);
 	
 		TH1F *m13_data = new TH1F("m13_data","", m13.getNumBins(), m13.getLowerLimit(), m13.getUpperLimit());
-		char b_m13[20];  sprintf(b_m13, "(%.2f",(m13.getUpperLimit()-m13.getLowerLimit())/m13.getNumBins()*2);//Rebin(2) later
+		char b_m13[20];  sprintf(b_m13, "(%.2f",(m13.getUpperLimit()-m13.getLowerLimit())/m13.getNumBins()*2);//Rebin() later
 		TString ytitle_m13 = a + b_m13 + c;
 		m13_data->SetMarkerStyle(20);
 		m13_data->SetMarkerSize(0.6);
 		m13_data->SetLineWidth(2);
 		m13_data->GetYaxis()->SetTitle(ytitle_m13);
-		m13_data->GetXaxis()->SetTitle("M^{2}(K_{S}^{0}#pi^{0}) (GeV^{2}/c^{4})");
+		m13_data->GetXaxis()->SetTitle("M^{2}_{K_{S}^{0}#pi^{0}} (GeV^{2}/c^{4})");
 		m13_data->SetLineColor(1);
 	
 		TH1F *m23_data = new TH1F("m23_data","", m12.getNumBins(), getM23LowerLimit(m12,m13), getM23UpperLimit(m12,m13));
-		char b_m23[20];  sprintf(b_m23, "(%.2f",(getM23UpperLimit(m12,m13)-getM23LowerLimit(m12,m13))/m13.getNumBins()*2);//Rebin(2) later
+		char b_m23[20];  sprintf(b_m23, "(%.2f",(getM23UpperLimit(m12,m13)-getM23LowerLimit(m12,m13))/m13.getNumBins()*2);//Rebin() later
 		TString ytitle_m23 = a + b_m23 + c;
 		m23_data->SetMarkerStyle(20);
 		m23_data->SetMarkerSize(0.6);
 		m23_data->SetLineWidth(2);
 		m23_data->GetYaxis()->SetTitle(ytitle_m23);
-		m23_data->GetXaxis()->SetTitle("M^{2}(K^{+}K_{S}^{0}) (GeV^{2}/c^{4})");
+		m23_data->GetXaxis()->SetTitle("M^{2}_{K^{+}K_{S}^{0}} (GeV^{2}/c^{4})");
 		m23_data->SetLineColor(1);
 	
 		//Drawing 2D pull distribution
@@ -1320,26 +1502,27 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 		tmp.Divide(2,2);
 		tmp.cd(1);
 		gStyle->SetPalette(52,0);
-		dalitzData->GetXaxis()->SetTitle("M^{2}(K^{+}#pi^{0}) (GeV^{2}/c^{4})");
-		dalitzData->GetYaxis()->SetTitle("M^{2}(K_{S}^{0}#pi^{0}) (GeV^{2}/c^{4})");
+		dalitzData->GetXaxis()->SetTitle("M^{2}_{K^{+}#pi^{0}} (GeV^{2}/c^{4})");
+		dalitzData->GetYaxis()->SetTitle("M^{2}_{K_{S}^{0}#pi^{0}} (GeV^{2}/c^{4})");
 		dalitzData->Draw("colz");
 	
 		tmp.cd(2);
 		dalitzplot->Scale(dalitzData->Integral()/dalitzplot->Integral());
 		dalitzplot->Draw("colz");
-	
+
+		int nonEmpty = 0;
+		double Chi2 = 0;
+/*
 		TH2F *pull = new TH2F("Pull","Pull Distribution",
 			dalitzplot->GetNbinsX(), dalitzplot->GetXaxis()->GetXmin(), dalitzplot->GetXaxis()->GetXmax(),
 			dalitzplot->GetNbinsY(), dalitzplot->GetYaxis()->GetXmin(), dalitzplot->GetYaxis()->GetXmax());
-		pull->GetXaxis()->SetTitle("M^{2}(K^{+}#pi^{0}) (GeV^{2}/c^{4})");
-		pull->GetYaxis()->SetTitle("M^{2}(K_{S}^{0}#pi^{0}) (GeV^{2}/c^{4})");
+		pull->GetXaxis()->SetTitle("M^{2}_{K^{+}#pi^{0}} (GeV^{2}/c^{4})");
+		pull->GetYaxis()->SetTitle("M^{2}_{K_{S}^{0}#pi^{0}} (GeV^{2}/c^{4})");
 	
-		dalitzplot->Rebin2D(4,4);
-		dalitzData->Rebin2D(4,4);
-		pull->Rebin2D(4,4);
+		dalitzplot->Rebin2D(5,5);
+		dalitzData->Rebin2D(5,5);
+		pull->Rebin2D(5,5);
 	
-		int nonEmpty = 0;
-		double Chi2 = 0;
 		for (int i = 1; i <= dalitzplot->GetNbinsX(); ++i){
 			for (int j = 1; j <= dalitzplot->GetNbinsY(); ++j){
 				double dataTmp = dalitzData->GetBinContent(i,j);
@@ -1355,13 +1538,17 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 	//			cout << "pull = " << pull->GetBinContent(i,j) << endl;
 			}
 		}
-		cout << "chi and chi2 non-empty bin nums: " << nonEmpty << endl;
-		cout << "chi2 = " << Chi2 << endl;
-		tmp.cd(3);
-		pull->Draw("colz");
-//		tmp.SaveAs("plots/Original_Pull.C");
+		cout << "pull: chi and chi2 non-empty bin nums = " << nonEmpty << endl;
+		cout << "      chi2 = " << Chi2 << endl;
+*/
 
-	
+
+		ChisqInfo* ChiSq = getAdaptiveChisquare(dalitzData, dalitzplot);
+		cout << "Chisquare: " <<  ChiSq->chisq << " / " << ChiSq->dof << endl;
+		TH2F *pull = ChiSq->contribPlot;
+		pull->GetXaxis()->SetTitle("M^{2}_{K^{+}#pi^{0}} (GeV^{2}/c^{4})");
+		pull->GetYaxis()->SetTitle("M^{2}_{K_{S}^{0}#pi^{0}} (GeV^{2}/c^{4})");
+
 		//Drawing data & fit comparison
 		TCanvas *foo = new TCanvas("c1","c1",800,700);
 		foo->Divide(2,2);
@@ -1375,6 +1562,20 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 		m12_data->Rebin(2);
 		m12_pdf_hist.Rebin(2);
 
+		nonEmpty = 0;
+		Chi2 = 0;
+		for (int i = 1; i <= m12_data->GetNbinsX(); ++i){
+			double dataTmp = m12_data->GetBinContent(i);
+			double fitTmp = m12_pdf_hist.GetBinContent(i);
+			if(dataTmp != 0){
+				double val = (fitTmp-dataTmp)/sqrt(dataTmp);
+				Chi2 += val*val;
+				nonEmpty++;
+			}
+		}
+		cout << "m12: chi and chi2 non-empty bin nums = " << nonEmpty << endl;
+		cout << "     chi2 = " << Chi2 << endl;
+
 
 		foo->cd(3);
 		m13_data->Draw("e");
@@ -1382,6 +1583,22 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 		m13_pdf_hist.Draw("Hsame");
 		m13_data->Rebin(2);
 		m13_pdf_hist.Rebin(2);
+
+		nonEmpty = 0;
+		Chi2 = 0;
+		for (int i = 1; i <= m13_data->GetNbinsX(); ++i){
+			double dataTmp = m13_data->GetBinContent(i);
+			double fitTmp = m13_pdf_hist.GetBinContent(i);
+			if(dataTmp != 0){
+				double val = (fitTmp-dataTmp)/sqrt(dataTmp);
+				Chi2 += val*val;
+				nonEmpty++;
+			}
+		}
+		cout << "m13: chi and chi2 non-empty bin nums = " << nonEmpty << endl;
+		cout << "     chi2 = " << Chi2 << endl;
+
+
 	
 		foo->cd(4);
 		m23_data->Draw("e");
@@ -1389,6 +1606,22 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 		m23_pdf_hist.Draw("Hsame");
 		m23_data->Rebin(2);
 		m23_pdf_hist.Rebin(2);
+
+		nonEmpty = 0;
+		Chi2 = 0;
+		for (int i = 1; i <= m23_data->GetNbinsX(); ++i){
+			double dataTmp = m23_data->GetBinContent(i);
+			double fitTmp = m23_pdf_hist.GetBinContent(i);
+			if(dataTmp != 0){
+				double val = (fitTmp-dataTmp)/sqrt(dataTmp);
+				Chi2 += val*val;
+				nonEmpty++;
+			}
+		}
+		cout << "m23: chi and chi2 non-empty bin nums = " << nonEmpty << endl;
+		cout << "     chi2 = " << Chi2 << endl;
+
+
 
 		if(!m_effPoly)
 			foo->SaveAs("plots/dalitz_with_projections.C");
@@ -1523,6 +1756,9 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 			std::cout<<"Fit fraction for #"<<ii<<": "<<fracList[ii]<< " +- "<<errList[ii]<<std::endl;
 		std::cout<<"Fit fraction for K*(892)+ / Kbar*(892)0 rate: " << fraction_rate << " +- " << fraction_rate_err << std::endl;
 
+		if(m_test_for_pull){
+			datapdf->printOriginalParams();
+		}
 		if(m_print_for_sys){
 			cout << "tempsys" << endl;
 			cout << vec_phi[0][0] << endl;
@@ -1571,52 +1807,72 @@ void gen_test_pdf(bool use_eff = false,bool save_toy = false){
 	Variable K892zeroWidth("K892zero_width", 0.0473);
 	ResonancePdf *K892zero = new Resonances::RBW(
 		"K892zero",
-		Variable("K892zero_amp_real", -0.1661978868255),
-		Variable("K892zero_amp_imag", 0.2782520474192),
+		Variable("K892zero_amp_real", -0.3711157847882),
+		Variable("K892zero_amp_imag", 0.2194154470146),
 		K892zeroMass,
 		K892zeroWidth,
 		1,
 		PAIR_13);
 
-     Variable K1410zeroMass("K1410zero_mass", 1.421);
-     Variable K1410zeroWidth("K1410zero_width", 0.236);
-     ResonancePdf *K1410zero = new Resonances::RBW(
-          "K1410zero",
-          Variable("K1410zero_amp_real", -1.429763770204),
-          Variable("K1410zero_amp_imag", 0.5947540558733),
-          K1410zeroMass,
-          K1410zeroWidth,
-          1,
-          PAIR_13);
+	Variable a980pMass("a980pMass",m_a980p,0.020,0.9,1.06);
+	ResonancePdf *a980p = new Resonances::FLATTE(
+		"a980p",
+		Variable("a980p_amp_real", 0.8655022022291),
+		Variable("a980p_amp_imag", 0.9397819142879),
+		a980pMass,
+		Variable("g1",c_g1),
+		Variable("rg2og1",c_g2og1),
+		PAIR_23,
+		false);
 
-     Variable SwaveKppi0Mass("SwaveKppi0_Mass", 1.425);
-     Variable SwaveKppi0Width("SwaveKppi0_Width", 0.27);
-     ResonancePdf *SwaveKppi0 = new Resonances::LASS(
-          "SwaveKppi0",
-          Variable("SwaveKppi0_amp_real", 2.215632835258),
-          Variable("SwaveKppi0_amp_imag", -0.4672151150163),
-          SwaveKppi0Mass,
-          SwaveKppi0Width,
-          0,
-          PAIR_12);
+	ResonancePdf *nonr = new Resonances::NonRes(
+		"nonr",
+		Variable("nonr_amp_real", 1.201806574815),
+		Variable("nonr_amp_imag", 3.550475936164)
+		);
 
-     Variable SwaveKspi0Mass("SwaveKspi0_Mass", 1.425);
-     Variable SwaveKspi0Width("SwaveKspi0_Width", 0.27);
-     ResonancePdf *SwaveKspi0 = new Resonances::LASS(
-          "SwaveKspi0",
-          Variable("SwaveKspi0_amp_real", 1.608350533645),
-          Variable("SwaveKspi0_amp_imag", -0.8386699269021),
-          SwaveKspi0Mass,
-          SwaveKspi0Width,
-          0,
-          PAIR_13);
+
+//     Variable K1410zeroMass("K1410zero_mass", 1.421);
+//     Variable K1410zeroWidth("K1410zero_width", 0.236);
+//     ResonancePdf *K1410zero = new Resonances::RBW(
+//          "K1410zero",
+//          Variable("K1410zero_amp_real", -1.429763770204),
+//          Variable("K1410zero_amp_imag", 0.5947540558733),
+//          K1410zeroMass,
+//          K1410zeroWidth,
+//          1,
+//          PAIR_13);
+//
+//     Variable SwaveKppi0Mass("SwaveKppi0_Mass", 1.425);
+//     Variable SwaveKppi0Width("SwaveKppi0_Width", 0.27);
+//     ResonancePdf *SwaveKppi0 = new Resonances::LASS(
+//          "SwaveKppi0",
+//          Variable("SwaveKppi0_amp_real", 2.215632835258),
+//          Variable("SwaveKppi0_amp_imag", -0.4672151150163),
+//          SwaveKppi0Mass,
+//          SwaveKppi0Width,
+//          0,
+//          PAIR_12);
+//
+//     Variable SwaveKspi0Mass("SwaveKspi0_Mass", 1.425);
+//     Variable SwaveKspi0Width("SwaveKspi0_Width", 0.27);
+//     ResonancePdf *SwaveKspi0 = new Resonances::LASS(
+//          "SwaveKspi0",
+//          Variable("SwaveKspi0_amp_real", 1.608350533645),
+//          Variable("SwaveKspi0_amp_imag", -0.8386699269021),
+//          SwaveKspi0Mass,
+//          SwaveKspi0Width,
+//          0,
+//          PAIR_13);
 
 
 	dtop0pp.resonances.push_back(K892p);
 	dtop0pp.resonances.push_back(K892zero);
-	dtop0pp.resonances.push_back(K1410zero);
-	dtop0pp.resonances.push_back(SwaveKppi0);
-	dtop0pp.resonances.push_back(SwaveKspi0);
+	dtop0pp.resonances.push_back(a980p);
+	dtop0pp.resonances.push_back(nonr);
+//	dtop0pp.resonances.push_back(K1410zero);
+//	dtop0pp.resonances.push_back(SwaveKppi0);
+//	dtop0pp.resonances.push_back(SwaveKspi0);
 
 	GooPdf *eff = NULL;
 	if(!use_eff){
@@ -1660,10 +1916,23 @@ void gen_test_pdf(bool use_eff = false,bool save_toy = false){
 	Amp3Body *signal = new Amp3Body("signalPDF_test", m12, m13, eventNumber, dtop0pp, eff);
 	signal->setParameterConstantness(true);
 
-	if(save_toy)
-		saveToy(signal,m12,m13,eventNumber);
+	int num = 200;
+	if(save_toy){
+		for (int i = 0; i < num; ++i){
+			if(i==Int_t(num*0.1)) cout<<"*******************************completed 10%"<<"**************************************"<<endl;
+			if(i==Int_t(num*0.2)) cout<<"*******************************completed 20%"<<"**************************************"<<endl;
+			if(i==Int_t(num*0.3)) cout<<"*******************************completed 30%"<<"**************************************"<<endl;
+			if(i==Int_t(num*0.4)) cout<<"*******************************completed 40%"<<"**************************************"<<endl;
+			if(i==Int_t(num*0.5)) cout<<"*******************************completed 50%"<<"**************************************"<<endl;
+			if(i==Int_t(num*0.6)) cout<<"*******************************completed 60%"<<"**************************************"<<endl;
+			if(i==Int_t(num*0.7)) cout<<"*******************************completed 70%"<<"**************************************"<<endl;
+			if(i==Int_t(num*0.8)) cout<<"*******************************completed 80%"<<"**************************************"<<endl;
+			if(i==Int_t(num*0.9)) cout<<"*******************************completed 90%"<<"**************************************"<<endl;
+			if(i==Int_t(num*1-1)) cout<<"*******************************completed !!!"<<"**************************************"<<endl;
 
-
+			saveToy(signal,m12,m13,eventNumber,i,700);
+		}
+	}
 
 	UnbinnedDataSet data({m12, m13, eventNumber});
 	TFile *ff = TFile::Open("data_tagAll.root");
@@ -1755,7 +2024,7 @@ void gen_test_pdf(bool use_eff = false,bool save_toy = false){
 
 }
 
-void saveToy(Amp3Body *signal, Observable &m12, Observable &m13, EventNumber &eventNumber){
+void saveToy(Amp3Body *signal, Observable &m12, Observable &m13, EventNumber &eventNumber, int id, int num){
 //	Observable m12("m12", 0.3, 2);
 //	Observable m13("m13", 0.3, 2);
 //	EventNumber eventNumber("eventNumber");
@@ -1766,10 +2035,12 @@ void saveToy(Amp3Body *signal, Observable &m12, Observable &m13, EventNumber &ev
 	DalitzPlotter plotter(&prodpdf, signal);
 	
 	UnbinnedDataSet toyMC({m12, m13, eventNumber});
-	plotter.fillDataSetMC(toyMC, 600000);
+	plotter.fillDataSetMC(toyMC, num);
 
 	fptype m12_tmp,m13_tmp,m23_tmp;
-	TFile *newfile = new TFile("toyCheck.root","recreate");
+	char text[100];
+	sprintf(text,"./divide_root_toy/toy_%d.root",id);
+	TFile *newfile = new TFile(text,"recreate");
 	TTree *newtree = new TTree("DTag","");
 	
 	double m_recoil, dE_sig, m_KpKs_sq, m_Kppi0_sq, m_Kspi0_sq;
@@ -1821,10 +2092,12 @@ int main(int argc, char **argv) {
 
 	//Set up efficiency pdf
 	GooPdf* eff = NULL;
-	if(!m_effPoly)
-		eff = makeHistogramPdf(data, eff_filename, "th2d_dalitz", "efficiency");
-	else
-		eff = fitEffPoly(data);
+	if(m_fit_use_eff){
+		if(!m_effPoly)
+			eff = makeHistogramPdf(data, eff_filename, "th2d_dalitz", "efficiency");
+		else
+			eff = fitEffPoly(data);
+	}
 
 
 if(m_fit_data){
@@ -1942,6 +2215,6 @@ if(m_fit_data){
 }
 	if(m_test_pdf)
 		//use_eff, save_toy
-		gen_test_pdf(true,false);
+		gen_test_pdf(false,true);
 	return 1;
 }
