@@ -5,6 +5,7 @@ cp FitManagerMinuit2.h                 ~/GooFit/include/goofit/fitting/FitManage
 cp LASS.cu                             ~/GooFit/src/PDFs/physics/resonances/LASS.cu
 cp FLATTE.cu                           ~/GooFit/src/PDFs/physics/resonances/FLATTE.cu
 cp MetricTaker.cu                      ~/GooFit/src/PDFs/MetricTaker.cu
+cp GooPdf.cu                           ~/GooFit/src/PDFs/GooPdf.cu
 cp Params.cpp                          ~/GooFit/src/goofit/Params.cpp
 cp Params.h                            ~/GooFit/include/goofit/fitting/Params.h
 cp RBW.cu                              ~/GooFit/src/PDFs/physics/resonances/RBW.cu
