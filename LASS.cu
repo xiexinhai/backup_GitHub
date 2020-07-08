@@ -20,12 +20,19 @@ __device__ fpcomplex lass(fptype m12, fptype m13, fptype m23, ParameterContainer
     // Calculate momentum of the two daughters in the resonance rest frame; note symmetry under interchange (dm1 <->
     // dm2).
 
+//    fptype measureDaughterMoms = twoBodyCMmom(rMassSq,
+//                                              (PAIR_23 == cyclic_index ? c_daug2Mass : c_daug1Mass),
+//                                              (PAIR_23 == cyclic_index ? c_daug3Mass : c_daug2Mass));
+//    fptype nominalDaughterMoms = twoBodyCMmom(resmass,
+//                                              (PAIR_23 == cyclic_index ? c_daug2Mass : c_daug1Mass),
+//                                              (PAIR_23 == cyclic_index ? c_daug3Mass : c_daug2Mass));
+
     fptype measureDaughterMoms = twoBodyCMmom(rMassSq,
                                               (PAIR_23 == cyclic_index ? c_daug2Mass : c_daug1Mass),
-                                              (PAIR_23 == cyclic_index ? c_daug3Mass : c_daug2Mass));
+                                              (PAIR_23 == cyclic_index ? c_daug3Mass : (PAIR_12 == cyclic_index ? c_daug2Mass : c_daug3Mass)));
     fptype nominalDaughterMoms = twoBodyCMmom(resmass,
                                               (PAIR_23 == cyclic_index ? c_daug2Mass : c_daug1Mass),
-                                              (PAIR_23 == cyclic_index ? c_daug3Mass : c_daug2Mass));
+                                              (PAIR_23 == cyclic_index ? c_daug3Mass : (PAIR_12 == cyclic_index ? c_daug2Mass : c_daug3Mass)));
 
     if(0 != spin) {
         frFactor = dampingFactorSquare(nominalDaughterMoms, spin, c_meson_radius);
@@ -55,12 +62,28 @@ __device__ fpcomplex lass(fptype m12, fptype m13, fptype m23, ParameterContainer
 //    fptype _phiB = -0.0981907;
 
 	//new cited
-    fptype _a    = 0.224;
-    fptype _r    = -15.01;
-    fptype _R    = 1;
-    fptype _phiR = 1.10;
-    fptype _B    = 0.62;
-    fptype _phiB = -0.100;
+
+	fptype _a    = 0.224;
+//	fptype _a    = 0.224+0.003;
+//	fptype _a    = 0.224-0.003;
+
+	fptype _r    = -15.01;
+//	fptype _r    = -15.01+0.13;
+//	fptype _r    = -15.01-0.13;
+
+	fptype _R    = 1;
+
+	fptype _phiR = 1.10;
+//	fptype _phiR = 1.10+0.02;
+//	fptype _phiR = 1.10-0.02;
+
+	fptype _B    = 0.62;
+//	fptype _B    = 0.62+0.04;
+//	fptype _B    = 0.62-0.04;
+
+	fptype _phiB = -0.100;
+//	fptype _phiB = -0.100+0.01;
+//	fptype _phiB = -0.100-0.01;
 
 
     // background phase motion
