@@ -92,7 +92,7 @@ const fptype m13_upper = (_mDp-KpMass)*(_mDp-KpMass);
 const fptype m23_lower = (KsMass+KpMass)*(KsMass+KpMass);
 const fptype m23_upper = (_mDp-pi0Mass)*(_mDp-pi0Mass);
 
-bool m_draw_data = true;
+bool m_draw_data = false;
 bool m_effPoly = false;
 
 bool m_float_init = false;
@@ -222,7 +222,7 @@ ChisqInfo* getAdaptiveChisquare (const TH2F* datPlot, const TH2F* pdfPlot, bool 
 	bool acceptable = false;
 	int binSize = 1; 
 	vector<BigBin> binlist;
-	double limit = 0; 
+	double limit = 5; 
 	while (!acceptable) {
 		binlist.clear();
 		std::cout << "Attempting bin generation with size " << binSize << std::endl; 
@@ -701,14 +701,14 @@ Amp3Body *makeSignalPdf(Observable m12, Observable m13, EventNumber eventNumber,
 
 //	dtop0pp.resonances.push_back(K1410p);
 //	dtop0pp.resonances.push_back(K1410zero);
-	dtop0pp.resonances.push_back(a980p);
+//	dtop0pp.resonances.push_back(a980p);
 
-//	dtop0pp.resonances.push_back(SwaveKppi0);
-//	dtop0pp.resonances.push_back(SwaveKspi0);
+	dtop0pp.resonances.push_back(SwaveKppi0);
+	dtop0pp.resonances.push_back(SwaveKspi0);
 
 //	dtop0pp.resonances.push_back(K1430p);
 //	dtop0pp.resonances.push_back(Kbar1430zero);
-	dtop0pp.resonances.push_back(nonr);
+//	dtop0pp.resonances.push_back(nonr);
 
 //	dtop0pp.resonances.push_back(K1430zero2);
 //	dtop0pp.resonances.push_back(a1450p);
@@ -1807,8 +1807,10 @@ void gen_test_pdf(bool use_eff = false,bool save_toy = false){
 	Variable K892zeroWidth("K892zero_width", 0.0473);
 	ResonancePdf *K892zero = new Resonances::RBW(
 		"K892zero",
-		Variable("K892zero_amp_real", -0.3711157847882),
-		Variable("K892zero_amp_imag", 0.2194154470146),
+//		Variable("K892zero_amp_real", -0.3711157847882),
+//		Variable("K892zero_amp_imag", 0.2194154470146),
+		Variable("K892zero_amp_real", -0.3664247378405),
+		Variable("K892zero_amp_imag", 0.162760084231),
 		K892zeroMass,
 		K892zeroWidth,
 		1,
@@ -1843,36 +1845,36 @@ void gen_test_pdf(bool use_eff = false,bool save_toy = false){
 //          1,
 //          PAIR_13);
 //
-//     Variable SwaveKppi0Mass("SwaveKppi0_Mass", 1.425);
-//     Variable SwaveKppi0Width("SwaveKppi0_Width", 0.27);
-//     ResonancePdf *SwaveKppi0 = new Resonances::LASS(
-//          "SwaveKppi0",
-//          Variable("SwaveKppi0_amp_real", 2.215632835258),
-//          Variable("SwaveKppi0_amp_imag", -0.4672151150163),
-//          SwaveKppi0Mass,
-//          SwaveKppi0Width,
-//          0,
-//          PAIR_12);
-//
-//     Variable SwaveKspi0Mass("SwaveKspi0_Mass", 1.425);
-//     Variable SwaveKspi0Width("SwaveKspi0_Width", 0.27);
-//     ResonancePdf *SwaveKspi0 = new Resonances::LASS(
-//          "SwaveKspi0",
-//          Variable("SwaveKspi0_amp_real", 1.608350533645),
-//          Variable("SwaveKspi0_amp_imag", -0.8386699269021),
-//          SwaveKspi0Mass,
-//          SwaveKspi0Width,
-//          0,
-//          PAIR_13);
+     Variable SwaveKppi0Mass("SwaveKppi0_Mass", 1.425);
+     Variable SwaveKppi0Width("SwaveKppi0_Width", 0.27);
+     ResonancePdf *SwaveKppi0 = new Resonances::LASS(
+          "SwaveKppi0",
+          Variable("SwaveKppi0_amp_real", 1.452363736485),
+          Variable("SwaveKppi0_amp_imag", -0.8115999519399),
+          SwaveKppi0Mass,
+          SwaveKppi0Width,
+          0,
+          PAIR_12);
+
+     Variable SwaveKspi0Mass("SwaveKspi0_Mass", 1.425);
+     Variable SwaveKspi0Width("SwaveKspi0_Width", 0.27);
+     ResonancePdf *SwaveKspi0 = new Resonances::LASS(
+          "SwaveKspi0",
+          Variable("SwaveKspi0_amp_real", 2.251018780733),
+          Variable("SwaveKspi0_amp_imag", 1.234646710115),
+          SwaveKspi0Mass,
+          SwaveKspi0Width,
+          0,
+          PAIR_13);
 
 
 	dtop0pp.resonances.push_back(K892p);
 	dtop0pp.resonances.push_back(K892zero);
-	dtop0pp.resonances.push_back(a980p);
-	dtop0pp.resonances.push_back(nonr);
+//	dtop0pp.resonances.push_back(a980p);
+//	dtop0pp.resonances.push_back(nonr);
 //	dtop0pp.resonances.push_back(K1410zero);
-//	dtop0pp.resonances.push_back(SwaveKppi0);
-//	dtop0pp.resonances.push_back(SwaveKspi0);
+	dtop0pp.resonances.push_back(SwaveKppi0);
+	dtop0pp.resonances.push_back(SwaveKspi0);
 
 	GooPdf *eff = NULL;
 	if(!use_eff){
@@ -2039,7 +2041,7 @@ void saveToy(Amp3Body *signal, Observable &m12, Observable &m13, EventNumber &ev
 
 	fptype m12_tmp,m13_tmp,m23_tmp;
 	char text[100];
-	sprintf(text,"./divide_root_toy/toy_%d.root",id);
+	sprintf(text,"./divide_root_toy_setB/toy_setB_%d.root",id);
 	TFile *newfile = new TFile(text,"recreate");
 	TTree *newtree = new TTree("DTag","");
 	
@@ -2143,11 +2145,11 @@ if(m_fit_data){
 			init_val.push_back(0.99428);
 
 			//Kpi S-wave
-			init_val.push_back(2.215767542859);
-			init_val.push_back(-0.467108552158);
+			init_val.push_back(1.45);
+			init_val.push_back(-0.81);
 
-			init_val.push_back(1.60814191448);
-			init_val.push_back(-0.8384406300105);
+			init_val.push_back(2.25);
+			init_val.push_back(1.23);
 
 			//nonr
 			init_val.push_back(1.2332);
