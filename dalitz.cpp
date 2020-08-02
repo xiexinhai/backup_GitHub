@@ -58,6 +58,18 @@ const fptype w_K892zero = 0.0473;
 //const fptype w_K892zero = 0.0473+0.0005;
 //const fptype w_K892zero = 0.0473-0.0005;
 
+const fptype m_K1430 = 1.441;
+//const fptype m_K1430 = 1.441+0.002;
+//const fptype m_K1430 = 1.441-0.002;
+
+const fptype w_K1430 = 0.193;
+//const fptype w_K1430 = 0.193+0.004;
+//const fptype w_K1430 = 0.193-0.004;
+
+//old
+//const fptype m_K1430 = 1.425;
+//const fptype w_K1430 = 0.27;
+
 const fptype m_a980p = 0.980;
 //const fptype m_a980p = 0.980+0.020;
 //const fptype m_a980p = 0.980-0.020;
@@ -80,8 +92,8 @@ const fptype KpMass = 0.493677;
 const fptype pi0Mass = 0.134977;
 const int BinNumsM12 = 3500;
 const int BinNumsM13 = 3500;
-const int drawBinM12 = 100;
-const int drawBinM13 = 100;
+const int drawBinM12 = 1000;
+const int drawBinM13 = 1000;
 
 const fptype m12_lower = (KpMass+pi0Mass)*(KpMass+pi0Mass);
 const fptype m12_upper = (_mDp-KsMass)*(_mDp-KsMass);
@@ -92,7 +104,7 @@ const fptype m13_upper = (_mDp-KpMass)*(_mDp-KpMass);
 const fptype m23_lower = (KsMass+KpMass)*(KsMass+KpMass);
 const fptype m23_upper = (_mDp-pi0Mass)*(_mDp-pi0Mass);
 
-bool m_draw_data = false;
+bool m_draw_data = true;
 bool m_effPoly = false;
 
 bool m_float_init = false;
@@ -222,10 +234,10 @@ ChisqInfo* getAdaptiveChisquare (const TH2F* datPlot, const TH2F* pdfPlot, bool 
 	bool acceptable = false;
 	int binSize = 1; 
 	vector<BigBin> binlist;
-	double limit = 5; 
+	double limit = 10;
 	while (!acceptable) {
 		binlist.clear();
-		std::cout << "Attempting bin generation with size " << binSize << std::endl; 
+//		std::cout << "Attempting bin generation with size " << binSize << std::endl; 
 	
 		for (int xbin = 1; xbin <= datPlot->GetNbinsX(); xbin += binSize) {
 			for (int ybin = 1; ybin <= datPlot->GetNbinsY(); ybin += binSize) {
@@ -253,7 +265,7 @@ ChisqInfo* getAdaptiveChisquare (const TH2F* datPlot, const TH2F* pdfPlot, bool 
 			if ((*bin).getContent(datPlot) > limit) continue; 
 			acceptable = false;
 			binSize *= 2; 
-			std::cout << "Couldn't get good bins, retry.\n"; 
+//			std::cout << "Couldn't get good bins, retry.\n"; 
 			break;
 		}
 	}
@@ -450,6 +462,9 @@ void getRealData(std::string toyFileName, GooFit::Application &app, DataSet &dat
 		t->GetEvent(i);
 		if(m_recoil<mrec_min||m_recoil>mrec_max) continue;
 		if(dE_sig<dE_min||dE_sig>dE_max) continue;
+
+		if(!cpuDalitz(m_Kppi0_sq,m_Kspi0_sq)) {cout << "mKpi0 = " << m_Kppi0_sq << endl << "mKspi0 = " << m_Kspi0_sq << endl;}
+
 		if(!cpuDalitz(m_Kppi0_sq,m_Kspi0_sq)) continue;
 		m12.setValue(m_Kppi0_sq);
 		m13.setValue(m_Kspi0_sq);
@@ -549,8 +564,10 @@ Amp3Body *makeSignalPdf(Observable m12, Observable m13, EventNumber eventNumber,
 		false);
 
 	//SwaveKppi0
-	Variable SwaveKppi0Mass("SwaveKppi0_Mass", 1.425, 0.050, 1.2, 1.6);
-	Variable SwaveKppi0Width("SwaveKppi0_Width", 0.27, 0.08, 0.1, 0.3);
+//	Variable SwaveKppi0Mass("SwaveKppi0_Mass", 1.425, 0.050, 1.2, 1.6);
+//	Variable SwaveKppi0Width("SwaveKppi0_Width", 0.27, 0.08, 0.1, 0.3);
+	Variable SwaveKppi0Mass("SwaveKppi0_Mass", m_K1430, 0.050, 1.2, 1.6);
+	Variable SwaveKppi0Width("SwaveKppi0_Width", w_K1430, 0.08, 0.1, 0.3);
 
 	sprintf(strbuffer, "SwaveKppi0_amp_real_%d", i);
 	Variable SwaveKppi0_amp_real(strbuffer,init_val[8], 0.01, 0, 0);
@@ -566,8 +583,10 @@ Amp3Body *makeSignalPdf(Observable m12, Observable m13, EventNumber eventNumber,
 		PAIR_12);
 
 	//SwaveKspi0
-	Variable SwaveKspi0Mass("SwaveKspi0_Mass", 1.425, 0.050, 1.2, 1.6);
-	Variable SwaveKspi0Width("SwaveKspi0_Width", 0.27, 0.08, 0.1, 0.3);
+//	Variable SwaveKspi0Mass("SwaveKspi0_Mass", 1.425, 0.050, 1.2, 1.6);
+//	Variable SwaveKspi0Width("SwaveKspi0_Width", 0.27, 0.08, 0.1, 0.3);
+	Variable SwaveKspi0Mass("SwaveKspi0_Mass", m_K1430, 0.050, 1.2, 1.6);
+	Variable SwaveKspi0Width("SwaveKspi0_Width", w_K1430, 0.08, 0.1, 0.3);
 
 	sprintf(strbuffer, "SwaveKspi0_amp_real_%d", i);
 	Variable SwaveKspi0_amp_real(strbuffer,init_val[10], 0.01, 0, 0);
@@ -999,8 +1018,8 @@ void makeEffPlot(GooPdf* total, UnbinnedDataSet* data){
 	m13_pdf_hist.SetLineColor(kRed); 
 	m13_pdf_hist.SetLineWidth(2); 
 
-	TH1F m23_pdf_hist("m23_pdf_hist", "", m12.getNumBins(), getM23LowerLimit(m12,m13), getM23UpperLimit(m12,m13));
-//	TH1F m23_pdf_hist("m23_pdf_hist", "", m12.getNumBins(), m23_lower, m23_upper);
+	TH1F m23_pdf_hist("m23_pdf_hist", "", m13.getNumBins(), getM23LowerLimit(m12,m13), getM23UpperLimit(m12,m13));
+//	TH1F m23_pdf_hist("m23_pdf_hist", "", m13.getNumBins(), m23_lower, m23_upper);
 	m23_pdf_hist.SetStats(false); 
 	m23_pdf_hist.SetLineColor(kRed); 
 	m23_pdf_hist.SetLineWidth(2); 
@@ -1033,7 +1052,7 @@ void makeEffPlot(GooPdf* total, UnbinnedDataSet* data){
 	m13_data->GetXaxis()->SetTitle("M^{2}_{K_{S}^{0}#pi^{0}} (GeV^{2}/c^{4})");
 	m13_data->SetLineColor(1);
 	
-	TH1F *m23_data = new TH1F("m23_data","", m12.getNumBins(), getM23LowerLimit(m12,m13), getM23UpperLimit(m12,m13));
+	TH1F *m23_data = new TH1F("m23_data","", m13.getNumBins(), getM23LowerLimit(m12,m13), getM23UpperLimit(m12,m13));
 //	TH1F *m23_data = new TH1F("m23_data","", m12.getNumBins(), m23_lower, m23_upper);
 	m23_data->SetMarkerStyle(20);
 	m23_data->SetMarkerSize(0.6);
@@ -1334,6 +1353,13 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 		m12.setNumBins(drawBinM12);
 		m13.setNumBins(drawBinM13);
 
+//		double bin_m12[70] = {0.368, 0.444623188485189, 0.48379710157630235, 0.5341195654555669, 0.5724927539407559, 0.6149106282839634, 0.644619565455567, 0.6743449277585291, 0.6917884063052095, 0.7148795988820618, 0.7275951692938374, 0.7389613528898877, 0.7464611802603239, 0.7525502071867796, 0.7586392341132351, 0.7635826086629881, 0.7684538300247593, 0.7733250513865305, 0.7781352652505958, 0.7828711750822834, 0.7876070849139711, 0.7923429947456588, 0.7952943838247574, 0.7979583331050817, 0.800622282385406, 0.8032862316657303, 0.8059501809460546, 0.808614130226379, 0.8116693283791978, 0.8151487724286995, 0.8186282164782014, 0.8221076605277031, 0.8255871045772049, 0.8303753626681648, 0.83605845446619, 0.8417415462642153, 0.848466918961286, 0.8558796469780737, 0.864766044845469, 0.8769440986983802, 0.893571013571808, 0.9106202889658834, 0.9217934777249746, 0.936884056791478, 0.9566681151481101, 0.9749082117135399, 1.0168333324203267, 1.0424318826606742, 1.0731304334488252, 1.1073064173121259, 1.1316625250179482, 1.1476482208242176, 1.1730890261438787, 1.2023022767068436, 1.2301217381777325, 1.2990169074715696, 1.355765699795029, 1.409681158785155, 1.4437632844419475, 1.4657072460592444, 1.4925130429066396, 1.5334115936947907, 1.5625169074715695, 1.6143381640394963, 1.635362318613746, 1.6698057968473954, 1.7021304345444332, 1.7346028984236979, 1.7958357486864147, 1.983};
+//
+//		double bin_m13[70] = {0.385, 0.41336618357487925, 0.4240579710144927, 0.4340869565217391, 0.44519806763285025, 0.4568188405797102, 0.4689968944099379, 0.4830374396135266, 0.4964570791527313, 0.5112434782608696, 0.5276297760210804, 0.5442689210950081, 0.561159420289855, 0.5751081382385731, 0.5882229654403568, 0.6013377926421404, 0.6159894598155469, 0.6407615283267457, 0.6562608695652175, 0.673236231884058, 0.6888050065876152, 0.710463768115942, 0.7199355877616747, 0.7306666666666668, 0.7428447204968944, 0.7550227743271222, 0.769437417654809, 0.7825536231884058, 0.793657004830918, 0.8017757073844031, 0.8098944099378882, 0.8193486312399356, 0.8291845410628019, 0.8405507246376811, 0.8623961352657005, 0.8766038647342995, 0.9155478260869567, 0.9463079710144927, 0.9778178053830228, 1.043072463768116, 1.091177536231884, 1.179400966183575, 1.224898550724638, 1.2936376811594201, 1.3290851449275363, 1.3576956521739132, 1.391777777777778, 1.412596618357488, 1.4292065217391305, 1.4505181159420293, 1.4718297101449276, 1.4953754940711463, 1.5117359098228664, 1.5286243032329991, 1.544202898550725, 1.5777563405797104, 1.5884121376811595, 1.6081552795031058, 1.6291755233494365, 1.6468393719806766, 1.661570652173913, 1.6809214975845412, 1.6952318840579712, 1.7107312252964428, 1.7360893719806765, 1.7617184265010353, 1.7740372670807456, 1.7958357487922707, 1.8226438923395447, 1.983};
+//
+//		double bin_m23[70] = {0.9793836006789989, 1.0324554847369698, 1.0726679162989667, 1.112127252852912, 1.163643214205569, 1.2041931175872116, 1.2536949050268251, 1.2936231497933306, 1.3162248808722359, 1.3348722172797893, 1.3548603294574668, 1.3706631451924565, 1.3864659609274461, 1.4060139526458726, 1.4314246810479057, 1.448758057200738, 1.4625855209688539, 1.4751119420638623, 1.487914557200738, 1.5095829122732018, 1.5234103760413178, 1.5359669919833467, 1.5470289629978395, 1.55980671179011, 1.5745560064761004, 1.592880726282864, 1.6071250670046595, 1.6225764702442165, 1.6497305185533953, 1.664788866379482, 1.68322548473697, 1.7031492396776815, 1.7198551327700962, 1.743970412273202, 1.7674981724840055, 1.7993335523698202, 1.8287895137224772, 1.8746176793539473, 1.9401125861862454, 2.017642296331173, 2.1079604122732025, 2.2499117166210283, 2.351579542707985, 2.385697182459537, 2.4205090499543616, 2.4434429243504967, 2.4680250821604806, 2.490217487372016, 2.510330161943821, 2.5319671111459883, 2.5508094435470388, 2.5624536235622943, 2.578748132958314, 2.598860807530119, 2.618377658650014, 2.6374004122732018, 2.6578282078490982, 2.669472387864354, 2.6829324654132987, 2.7010427129978396, 2.7148701767659555, 2.728697640534072, 2.7425251043021874, 2.7534551948818975, 2.7639904053718904, 2.785568302772397, 2.813880412273202, 2.83231703063069, 2.8979641803891454, 3.075083600678999};
+
+
 //		datapdf->printCovMat();
 		ProdPdf prodpdf{"prodpdf", {signal}};
 	
@@ -1346,16 +1372,19 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 		dalitzplot->GetYaxis()->SetTitle("M^{2}_{K_{S}^{0}#pi^{0}} (GeV^{2}/c^{4})");
 	
 		TH1F m12_pdf_hist("m12_pdf_hist", "", m12.getNumBins(), m12.getLowerLimit(), m12.getUpperLimit());
+//		TH1F m12_pdf_hist("m12_pdf_hist", "", 69, bin_m12);
 		m12_pdf_hist.SetStats(false); 
 		m12_pdf_hist.SetLineColor(kRed); 
 		m12_pdf_hist.SetLineWidth(2); 
 	
 		TH1F m13_pdf_hist("m13_pdf_hist", "", m13.getNumBins(), m13.getLowerLimit(), m13.getUpperLimit());
+//		TH1F m13_pdf_hist("m13_pdf_hist", "", 69, bin_m13);
 		m13_pdf_hist.SetStats(false); 
 		m13_pdf_hist.SetLineColor(kRed); 
 		m13_pdf_hist.SetLineWidth(2); 
 	
-		TH1F m23_pdf_hist("m23_pdf_hist", "", m12.getNumBins(), getM23LowerLimit(m12,m13), getM23UpperLimit(m12,m13));
+		TH1F m23_pdf_hist("m23_pdf_hist", "", m13.getNumBins(), getM23LowerLimit(m12,m13), getM23UpperLimit(m12,m13));
+//		TH1F m23_pdf_hist("m23_pdf_hist", "", 69, bin_m23);
 		m23_pdf_hist.SetStats(false); 
 		m23_pdf_hist.SetLineColor(kRed); 
 		m23_pdf_hist.SetLineWidth(2); 
@@ -1441,8 +1470,11 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 		//for data comparison
 		TString a("Events/"); TString c(" GeV^{2}/c^{4})");
 		TH1F *m12_data = new TH1F("m12_data","", m12.getNumBins(), m12.getLowerLimit(), m12.getUpperLimit());
-		char b_m12[20];  sprintf(b_m12, "(%.2f",(m12.getUpperLimit()-m12.getLowerLimit())/m12.getNumBins()*2);//Rebin() later
+//		TH1F *m12_data = new TH1F("m12_data","", 69, bin_m12);
+		char b_m12[20];  sprintf(b_m12, "(%.2f",(m12.getUpperLimit()-m12.getLowerLimit())/m12.getNumBins()*drawBinM12/50.0);//Rebin() later
 		TString ytitle_m12 = a + b_m12 + c;
+//		TString ytitle_m12 = a + c;
+
 		m12_data->SetMarkerStyle(20);
 		m12_data->SetMarkerSize(0.6);
 		m12_data->SetLineWidth(2);
@@ -1451,8 +1483,10 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 		m12_data->SetLineColor(1);
 	
 		TH1F *m13_data = new TH1F("m13_data","", m13.getNumBins(), m13.getLowerLimit(), m13.getUpperLimit());
-		char b_m13[20];  sprintf(b_m13, "(%.2f",(m13.getUpperLimit()-m13.getLowerLimit())/m13.getNumBins()*2);//Rebin() later
+//		TH1F *m13_data = new TH1F("m13_data","", 69, bin_m13);
+		char b_m13[20];  sprintf(b_m13, "(%.2f",(m13.getUpperLimit()-m13.getLowerLimit())/m13.getNumBins()*drawBinM13/50.0);//Rebin() later
 		TString ytitle_m13 = a + b_m13 + c;
+//		TString ytitle_m13 = a + c;
 		m13_data->SetMarkerStyle(20);
 		m13_data->SetMarkerSize(0.6);
 		m13_data->SetLineWidth(2);
@@ -1460,9 +1494,11 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 		m13_data->GetXaxis()->SetTitle("M^{2}_{K_{S}^{0}#pi^{0}} (GeV^{2}/c^{4})");
 		m13_data->SetLineColor(1);
 	
-		TH1F *m23_data = new TH1F("m23_data","", m12.getNumBins(), getM23LowerLimit(m12,m13), getM23UpperLimit(m12,m13));
-		char b_m23[20];  sprintf(b_m23, "(%.2f",(getM23UpperLimit(m12,m13)-getM23LowerLimit(m12,m13))/m13.getNumBins()*2);//Rebin() later
+		TH1F *m23_data = new TH1F("m23_data","", m13.getNumBins(), getM23LowerLimit(m12,m13), getM23UpperLimit(m12,m13));
+//		TH1F *m23_data = new TH1F("m23_data","", 69, bin_m23);
+		char b_m23[20];  sprintf(b_m23, "(%.2f",(getM23UpperLimit(m12,m13)-getM23LowerLimit(m12,m13))/m13.getNumBins()*drawBinM13/50.0);//Rebin() later
 		TString ytitle_m23 = a + b_m23 + c;
+//		TString ytitle_m23 = a + c;
 		m23_data->SetMarkerStyle(20);
 		m23_data->SetMarkerSize(0.6);
 		m23_data->SetLineWidth(2);
@@ -1497,7 +1533,18 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 		}
 		cout << dalitzData->GetEntries() << endl;
 		f->Close();
-	
+
+		TFile *fnew = new TFile("plots/hist_results.root","recreate");
+		dalitzData->Write();
+		dalitzplot->Write();
+		m12_data->Write();
+		m12_pdf_hist.Write();
+		m13_data->Write();
+		m13_pdf_hist.Write();
+		m23_data->Write();
+		m23_pdf_hist.Write();
+		fnew->Close();
+
 		TCanvas tmp("c2","c2",800,700);
 		tmp.Divide(2,2);
 		tmp.cd(1);
@@ -1512,16 +1559,16 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 
 		int nonEmpty = 0;
 		double Chi2 = 0;
-/*
+///*
 		TH2F *pull = new TH2F("Pull","Pull Distribution",
 			dalitzplot->GetNbinsX(), dalitzplot->GetXaxis()->GetXmin(), dalitzplot->GetXaxis()->GetXmax(),
 			dalitzplot->GetNbinsY(), dalitzplot->GetYaxis()->GetXmin(), dalitzplot->GetYaxis()->GetXmax());
 		pull->GetXaxis()->SetTitle("M^{2}_{K^{+}#pi^{0}} (GeV^{2}/c^{4})");
 		pull->GetYaxis()->SetTitle("M^{2}_{K_{S}^{0}#pi^{0}} (GeV^{2}/c^{4})");
 	
-		dalitzplot->Rebin2D(5,5);
-		dalitzData->Rebin2D(5,5);
-		pull->Rebin2D(5,5);
+		dalitzplot->Rebin2D(drawBinM12/20.0,drawBinM13/20.0);
+		dalitzData->Rebin2D(drawBinM12/20.0,drawBinM13/20.0);
+		pull->Rebin2D(drawBinM12/20.0,drawBinM13/20.0);
 	
 		for (int i = 1; i <= dalitzplot->GetNbinsX(); ++i){
 			for (int j = 1; j <= dalitzplot->GetNbinsY(); ++j){
@@ -1540,27 +1587,60 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 		}
 		cout << "pull: chi and chi2 non-empty bin nums = " << nonEmpty << endl;
 		cout << "      chi2 = " << Chi2 << endl;
-*/
+//*/
 
 
-		ChisqInfo* ChiSq = getAdaptiveChisquare(dalitzData, dalitzplot);
-		cout << "Chisquare: " <<  ChiSq->chisq << " / " << ChiSq->dof << endl;
-		TH2F *pull = ChiSq->contribPlot;
-		pull->GetXaxis()->SetTitle("M^{2}_{K^{+}#pi^{0}} (GeV^{2}/c^{4})");
-		pull->GetYaxis()->SetTitle("M^{2}_{K_{S}^{0}#pi^{0}} (GeV^{2}/c^{4})");
+//		ChisqInfo* ChiSq = getAdaptiveChisquare(dalitzData, dalitzplot);
+//		cout << "Chisquare: " <<  ChiSq->chisq << " / " << ChiSq->dof << endl;
+//		TH2F *pull = ChiSq->contribPlot;
+//		pull->GetXaxis()->SetTitle("M^{2}_{K^{+}#pi^{0}} (GeV^{2}/c^{4})");
+//		pull->GetYaxis()->SetTitle("M^{2}_{K_{S}^{0}#pi^{0}} (GeV^{2}/c^{4})");
 
 		//Drawing data & fit comparison
 		TCanvas *foo = new TCanvas("c1","c1",800,700);
 		foo->Divide(2,2);
 		foo->cd(1);
-		pull->Draw("colz");
+
+//		pull->Draw("colz");
+
+		dalitzData->GetYaxis()->SetTitle("M^{2}_{K_{S}^{0}#pi^{0}} (GeV^{2}/c^{4})");
+		dalitzData->GetXaxis()->SetTitle("M^{2}_{K^{+}#pi^{0}} (GeV^{2}/c^{4})    ");
 	
+		dalitzData->GetZaxis()->SetTitle("Events");
+	
+		dalitzData->SetMarkerStyle(24);
+		dalitzData->SetMarkerSize(0.7);
+	
+		dalitzData->GetXaxis()->SetNdivisions(505);
+		dalitzData->GetXaxis()->SetLabelFont(22);
+		dalitzData->GetXaxis()->SetLabelOffset(0.015);
+		dalitzData->GetXaxis()->SetLabelSize(0.04);
+		dalitzData->GetXaxis()->SetTitleSize(0.04);
+		dalitzData->GetXaxis()->SetTitleOffset(1.8);
+		dalitzData->GetXaxis()->SetTitleFont(22);
+
+		dalitzData->GetYaxis()->SetNdivisions(505);
+		dalitzData->GetYaxis()->SetLabelFont(22);
+		dalitzData->GetYaxis()->SetLabelOffset(0.015);
+		dalitzData->GetYaxis()->SetLabelSize(0.04);
+		dalitzData->GetYaxis()->SetTitleSize(0.04);
+		dalitzData->GetYaxis()->SetTitleOffset(1.8);
+		dalitzData->GetYaxis()->SetTitleFont(22);
+	
+		dalitzData->GetZaxis()->SetLabelFont(22);
+		dalitzData->GetZaxis()->SetLabelSize(0.04);
+		dalitzData->GetZaxis()->SetTitleSize(0.04);
+		dalitzData->GetZaxis()->SetTitleFont(22);
+	
+		dalitzData->Draw("lego2Z");
+		dalitzplot->Draw("surf3SAME");
+
 		foo->cd(2);
 		m12_data->Draw("e");
 		m12_pdf_hist.Scale(m12_data->Integral()/m12_pdf_hist.Integral());
 		m12_pdf_hist.Draw("Hsame");
-		m12_data->Rebin(2);
-		m12_pdf_hist.Rebin(2);
+		m12_data->Rebin(drawBinM12/50.0);
+		m12_pdf_hist.Rebin(drawBinM12/50.0);
 
 		nonEmpty = 0;
 		Chi2 = 0;
@@ -1581,8 +1661,8 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 		m13_data->Draw("e");
 		m13_pdf_hist.Scale(m13_data->Integral()/m13_pdf_hist.Integral());
 		m13_pdf_hist.Draw("Hsame");
-		m13_data->Rebin(2);
-		m13_pdf_hist.Rebin(2);
+		m13_data->Rebin(drawBinM13/50.0);
+		m13_pdf_hist.Rebin(drawBinM13/50.0);
 
 		nonEmpty = 0;
 		Chi2 = 0;
@@ -1604,8 +1684,8 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 		m23_data->Draw("e");
 		m23_pdf_hist.Scale(m23_data->Integral()/m23_pdf_hist.Integral());
 		m23_pdf_hist.Draw("Hsame");
-		m23_data->Rebin(2);
-		m23_pdf_hist.Rebin(2);
+		m23_data->Rebin(drawBinM13/50.0);
+		m23_pdf_hist.Rebin(drawBinM13/50.0);
 
 		nonEmpty = 0;
 		Chi2 = 0;
@@ -2129,8 +2209,8 @@ if(m_fit_data){
 			//for smooth eff // data
 			
 			//Kbar(892)0
-			init_val.push_back(-0.37179);
-			init_val.push_back(0.2203);
+			init_val.push_back(-0.3903576304746);
+			init_val.push_back(0.1297451247656);
 
 			//K(1410)+ 
 			init_val.push_back(-1.429793910011);
@@ -2145,11 +2225,11 @@ if(m_fit_data){
 			init_val.push_back(0.99428);
 
 			//Kpi S-wave
-			init_val.push_back(1.45);
-			init_val.push_back(-0.81);
+			init_val.push_back(-1.543673413092);
+			init_val.push_back(1.301284773652);
 
-			init_val.push_back(2.25);
-			init_val.push_back(1.23);
+			init_val.push_back(-3.124202874666);
+			init_val.push_back(-0.3446744759832);
 
 			//nonr
 			init_val.push_back(1.2332);
