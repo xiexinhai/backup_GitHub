@@ -61,8 +61,35 @@ __device__ fpcomplex lass(fptype m12, fptype m13, fptype m23, ParameterContainer
 //    fptype _B    = 0.614463;
 //    fptype _phiB = -0.0981907;
 
-	//new cited
+	//new cited PhysRevD.98.112012
+	fptype fac = 3.141592653/180.0;
 
+	fptype _a    = 0.113;
+//	fptype _a    = 0.113+0.006;
+//	fptype _a    = 0.113-0.006;
+
+	fptype _r    = -33.8;
+//	fptype _r    = -33.8+1.8;
+//	fptype _r    = -33.8-1.8;
+
+	fptype _R    = 1;
+
+	fptype _phiR = -109.7;
+//	fptype _phiR = -109.7+2.6;
+//	fptype _phiR = -109.7-2.6;
+	_phiR *= fac;
+
+	fptype _B    = 0.96;
+//	fptype _B    = 0.96+0.07;
+//	fptype _B    = 0.96-0.07;
+
+	fptype _phiB = 0.1;
+//	fptype _phiB = 0.1+0.3;
+//	fptype _phiB = 0.1-0.3;
+	_phiB *= fac;
+
+/*
+	//old cited PhysRevLett.105.081803
 	fptype _a    = 0.224;
 //	fptype _a    = 0.224+0.003;
 //	fptype _a    = 0.224-0.003;
@@ -85,6 +112,7 @@ __device__ fpcomplex lass(fptype m12, fptype m13, fptype m23, ParameterContainer
 //	fptype _phiB = -0.100+0.01;
 //	fptype _phiB = -0.100-0.01;
 
+*/
 
     // background phase motion
     fptype cot_deltaB  = (1.0 / (_a * q)) + 0.5 * _r * q;
