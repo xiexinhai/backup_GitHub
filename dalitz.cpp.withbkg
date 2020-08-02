@@ -341,8 +341,8 @@ Amp3Body *makeSignalPdf(Observable m12, Observable m13, EventNumber eventNumber,
 		false);
 
 	//SwaveKppi0
-	Variable SwaveKppi0Mass("SwaveKppi0_Mass", 1.425, 0.050, 1.2, 1.6);
-	Variable SwaveKppi0Width("SwaveKppi0_Width", 0.27, 0.08, 0.1, 0.3);
+	Variable SwaveKppi0Mass("SwaveKppi0_Mass", 1.441, 0.050, 1.2, 1.6);
+	Variable SwaveKppi0Width("SwaveKppi0_Width", 0.193, 0.08, 0.1, 0.3);
 
 	sprintf(strbuffer, "SwaveKppi0_amp_real_%d", i);
 	Variable SwaveKppi0_amp_real(strbuffer,init_val[8], 0.01, 0, 0);
@@ -358,8 +358,8 @@ Amp3Body *makeSignalPdf(Observable m12, Observable m13, EventNumber eventNumber,
 		PAIR_12);
 
 	//SwaveKspi0
-	Variable SwaveKspi0Mass("SwaveKspi0_Mass", 1.425, 0.050, 1.2, 1.6);
-	Variable SwaveKspi0Width("SwaveKspi0_Width", 0.27, 0.08, 0.1, 0.3);
+	Variable SwaveKspi0Mass("SwaveKspi0_Mass", 1.441, 0.050, 1.2, 1.6);
+	Variable SwaveKspi0Width("SwaveKspi0_Width", 0.193, 0.08, 0.1, 0.3);
 
 	sprintf(strbuffer, "SwaveKspi0_amp_real_%d", i);
 	Variable SwaveKspi0_amp_real(strbuffer,init_val[10], 0.01, 0, 0);
@@ -495,10 +495,10 @@ Amp3Body *makeSignalPdf(Observable m12, Observable m13, EventNumber eventNumber,
 	dtop0pp.resonances.push_back(K892zero);
 //	dtop0pp.resonances.push_back(K1410p);
 //	dtop0pp.resonances.push_back(K1410zero);
-	dtop0pp.resonances.push_back(a980p);
-//	dtop0pp.resonances.push_back(SwaveKppi0);
-//	dtop0pp.resonances.push_back(SwaveKspi0);
-	dtop0pp.resonances.push_back(nonr);
+//	dtop0pp.resonances.push_back(a980p);
+	dtop0pp.resonances.push_back(SwaveKppi0);
+	dtop0pp.resonances.push_back(SwaveKspi0);
+//	dtop0pp.resonances.push_back(nonr);
 //	dtop0pp.resonances.push_back(K1430p);
 //	dtop0pp.resonances.push_back(Kbar1430zero);
 
