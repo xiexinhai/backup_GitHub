@@ -9,6 +9,9 @@ cp ~/gpu_workfs/GooFit/src/PDFs/GooPdf.cu                                       
 cp ~/gpu_workfs/GooFit/src/goofit/Params.cpp                                              ./Params.cpp
 cp ~/gpu_workfs/GooFit/include/goofit/fitting/Params.h                                    ./Params.h
 cp ~/gpu_workfs/GooFit/src/PDFs/physics/resonances/RBW.cu                                 ./RBW.cu
+cp ~/gpu_workfs/GooFit/src/PDFs/physics/resonances/NonResPwave.cu                         ./NonResPwave.cu
+cp ~/gpu_workfs/GooFit/include/goofit/PDFs/physics/resonances/NonResPwave.h               ./NonResPwave.h
+cp ~/gpu_workfs/GooFit/src/PDFs/physics/CMakeLists.txt                                    ./CMakeLists.txt.PDFs.physics
 cp ~/gpu_workfs/GooFit/src/PDFs/physics/detail/SpecialResonanceIntegrator.cu              ./SpecialResonanceIntegrator.cu
 cp ~/gpu_workfs/GooFit/include/goofit/PDFs/physics/detail/SpecialResonanceIntegrator.h    ./SpecialResonanceIntegrator.h
 cp ~/gpu_workfs/GooFit/examples/dalitz/dalitz.cpp                                         ./dalitz.cpp
