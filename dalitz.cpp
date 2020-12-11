@@ -83,6 +83,8 @@ const fptype c_g2og1 = 0.892;
 const fptype _radius = 1.5;
 
 const bool fitMasses = false;
+const bool fitK892p = false;
+
 char strbuffer[1000];
 const fptype _mDp       = 1.86965;
 const fptype _mDp2      = _mDp * _mDp;
@@ -92,8 +94,8 @@ const fptype KpMass = 0.493677;
 const fptype pi0Mass = 0.134977;
 const int BinNumsM12 = 3500;
 const int BinNumsM13 = 3500;
-const int drawBinM12 = 1000;
-const int drawBinM13 = 1000;
+const int drawBinM12 = 2000;
+const int drawBinM13 = 2000;
 
 const fptype m12_lower = (KpMass+pi0Mass)*(KpMass+pi0Mass);
 const fptype m12_upper = (_mDp-KsMass)*(_mDp-KsMass);
@@ -104,7 +106,7 @@ const fptype m13_upper = (_mDp-KpMass)*(_mDp-KpMass);
 const fptype m23_lower = (KsMass+KpMass)*(KsMass+KpMass);
 const fptype m23_upper = (_mDp-pi0Mass)*(_mDp-pi0Mass);
 
-bool m_draw_data = true;
+bool m_draw_data = false;
 bool m_effPoly = false;
 
 bool m_float_init = false;
@@ -132,6 +134,9 @@ const fptype mrec_max = 1.8772;
 
 
 std::string eff_filename="weighted_acceptance_bin150.root";
+
+//std::string eff_filename="acceptance_bin150_sys_trk_PID_rec.root";
+
 //std::string eff_filename="weighted_acceptance_dE_plus.root";
 //std::string eff_filename="weighted_acceptance_dE_mius.root";
 //std::string eff_filename="weighted_acceptance_Mrec_plus.root";
@@ -489,10 +494,16 @@ Amp3Body *makeSignalPdf(Observable m12, Observable m13, EventNumber eventNumber,
 //	bool fixAmps = false; // Takes ~400x longer
 
 	//K*(892)+
-	Variable K892pMass("K892p_mass", m_K892p, 0.00025, 0.85, 0.93);
-	Variable K892pWidth("K892p_width", w_K892p, 0.0008, 0.04, 0.06);
+	Variable K892pMass("K892p_mass", m_K892p, 0.00025, m_K892p-0.00075, m_K892p+0.00075);
+	Variable K892pWidth("K892p_width", w_K892p, 0.001, 0.045, 0.055);
 	ResonancePdf *K892p = new Resonances::RBW(
 		"K892p", Variable("K892p_amp_real", 1), Variable("K892p_amp_imag", 0), K892pMass, K892pWidth, 1, PAIR_12);
+
+//	//temp Kbar*(892)0
+//	Variable K892zeroMass("K892zero_mass", m_K892zero, 0.00020, 0.85, 0.93);
+//	Variable K892zeroWidth("K892zero_width", w_K892zero, 0.0005, 0.04, 0.06);
+//	ResonancePdf *K892zero = new Resonances::RBW(
+//		"K892zero", Variable("K892zero_amp_real", 1), Variable("K892zero_amp_imag", 0), K892zeroMass, K892zeroWidth, 1, PAIR_13);
 
 
 	//Kbar*(892)0
@@ -714,6 +725,28 @@ Amp3Body *makeSignalPdf(Observable m12, Observable m13, EventNumber eventNumber,
 		1,
 		PAIR_23);
 
+	//non resonance Kppi0Pwave
+	sprintf(strbuffer, "nonr_Kppi0Pwave_amp_real_%d", i);
+	Variable nonr_Kppi0Pwave_amp_real(strbuffer,init_val[26], 0.01, 0, 0);
+	sprintf(strbuffer, "nonr_Kppi0Pwave_amp_imag_%d", i);
+	Variable nonr_Kppi0Pwave_amp_imag(strbuffer,init_val[27], 0.01, 0, 0);
+	ResonancePdf *nonr_Kppi0Pwave = new Resonances::NonResPwave(
+		"nonr_Kppi0Pwave",
+		fixAmps ? Variable("nonr_Kppi0Pwave_amp_real", 16.82603957812) : nonr_Kppi0Pwave_amp_real,
+		fixAmps ? Variable("nonr_Kppi0Pwave_amp_imag", 11.59309345464) : nonr_Kppi0Pwave_amp_imag,
+		PAIR_12);
+
+	//non resonance Kspi0Pwave
+	sprintf(strbuffer, "nonr_Kspi0Pwave_amp_real_%d", i);
+	Variable nonr_Kspi0Pwave_amp_real(strbuffer,init_val[28], 0.01, 0, 0);
+	sprintf(strbuffer, "nonr_Kspi0Pwave_amp_imag_%d", i);
+	Variable nonr_Kspi0Pwave_amp_imag(strbuffer,init_val[29], 0.01, 0, 0);
+	ResonancePdf *nonr_Kspi0Pwave = new Resonances::NonResPwave(
+		"nonr_Kspi0Pwave",
+		fixAmps ? Variable("nonr_Kspi0Pwave_amp_real", 16.82603957812) : nonr_Kspi0Pwave_amp_real,
+		fixAmps ? Variable("nonr_Kspi0Pwave_amp_imag", 11.59309345464) : nonr_Kspi0Pwave_amp_imag,
+		PAIR_13);
+
 
 	dtop0pp.resonances.push_back(K892p);
 	dtop0pp.resonances.push_back(K892zero);
@@ -733,6 +766,8 @@ Amp3Body *makeSignalPdf(Observable m12, Observable m13, EventNumber eventNumber,
 //	dtop0pp.resonances.push_back(a1450p);
 //	dtop0pp.resonances.push_back(rho1450p);
 //	dtop0pp.resonances.push_back(rho1700p);
+//	dtop0pp.resonances.push_back(nonr_Kppi0Pwave);
+//	dtop0pp.resonances.push_back(nonr_Kspi0Pwave);
 
 
     if(!fitMasses) {
@@ -740,6 +775,14 @@ Amp3Body *makeSignalPdf(Observable m12, Observable m13, EventNumber eventNumber,
             (*res)->setParameterConstantness(true);
         }
     }
+
+	if(fitK892p){
+		vector<ResonancePdf *>::iterator res = dtop0pp.resonances.begin();
+		for(int ii = 0; ii < 1; ++ii){
+			(*res)->setParameterConstantness(false);
+			++res;
+		}
+	}
 
     if(!eff) {
         // By default create a constant efficiency.
@@ -1334,7 +1377,7 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 	fracList.clear();
 
 	const int num_res = fracMat.size();
-	cout << "Un-diagonal elements in fraction matrix may be meaningless!!!" << endl;
+//	cout << "Un-diagonal elements in fraction matrix may be meaningless!!!" << endl;
 	for (int i = 0; i < num_res; ++i){
 		for (int j = 0; j < num_res; ++j){
 			cout << fracMat[i][j] << ",  ";
@@ -1352,13 +1395,6 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 		int oldBins2 = m13.getNumBins();
 		m12.setNumBins(drawBinM12);
 		m13.setNumBins(drawBinM13);
-
-//		double bin_m12[70] = {0.368, 0.444623188485189, 0.48379710157630235, 0.5341195654555669, 0.5724927539407559, 0.6149106282839634, 0.644619565455567, 0.6743449277585291, 0.6917884063052095, 0.7148795988820618, 0.7275951692938374, 0.7389613528898877, 0.7464611802603239, 0.7525502071867796, 0.7586392341132351, 0.7635826086629881, 0.7684538300247593, 0.7733250513865305, 0.7781352652505958, 0.7828711750822834, 0.7876070849139711, 0.7923429947456588, 0.7952943838247574, 0.7979583331050817, 0.800622282385406, 0.8032862316657303, 0.8059501809460546, 0.808614130226379, 0.8116693283791978, 0.8151487724286995, 0.8186282164782014, 0.8221076605277031, 0.8255871045772049, 0.8303753626681648, 0.83605845446619, 0.8417415462642153, 0.848466918961286, 0.8558796469780737, 0.864766044845469, 0.8769440986983802, 0.893571013571808, 0.9106202889658834, 0.9217934777249746, 0.936884056791478, 0.9566681151481101, 0.9749082117135399, 1.0168333324203267, 1.0424318826606742, 1.0731304334488252, 1.1073064173121259, 1.1316625250179482, 1.1476482208242176, 1.1730890261438787, 1.2023022767068436, 1.2301217381777325, 1.2990169074715696, 1.355765699795029, 1.409681158785155, 1.4437632844419475, 1.4657072460592444, 1.4925130429066396, 1.5334115936947907, 1.5625169074715695, 1.6143381640394963, 1.635362318613746, 1.6698057968473954, 1.7021304345444332, 1.7346028984236979, 1.7958357486864147, 1.983};
-//
-//		double bin_m13[70] = {0.385, 0.41336618357487925, 0.4240579710144927, 0.4340869565217391, 0.44519806763285025, 0.4568188405797102, 0.4689968944099379, 0.4830374396135266, 0.4964570791527313, 0.5112434782608696, 0.5276297760210804, 0.5442689210950081, 0.561159420289855, 0.5751081382385731, 0.5882229654403568, 0.6013377926421404, 0.6159894598155469, 0.6407615283267457, 0.6562608695652175, 0.673236231884058, 0.6888050065876152, 0.710463768115942, 0.7199355877616747, 0.7306666666666668, 0.7428447204968944, 0.7550227743271222, 0.769437417654809, 0.7825536231884058, 0.793657004830918, 0.8017757073844031, 0.8098944099378882, 0.8193486312399356, 0.8291845410628019, 0.8405507246376811, 0.8623961352657005, 0.8766038647342995, 0.9155478260869567, 0.9463079710144927, 0.9778178053830228, 1.043072463768116, 1.091177536231884, 1.179400966183575, 1.224898550724638, 1.2936376811594201, 1.3290851449275363, 1.3576956521739132, 1.391777777777778, 1.412596618357488, 1.4292065217391305, 1.4505181159420293, 1.4718297101449276, 1.4953754940711463, 1.5117359098228664, 1.5286243032329991, 1.544202898550725, 1.5777563405797104, 1.5884121376811595, 1.6081552795031058, 1.6291755233494365, 1.6468393719806766, 1.661570652173913, 1.6809214975845412, 1.6952318840579712, 1.7107312252964428, 1.7360893719806765, 1.7617184265010353, 1.7740372670807456, 1.7958357487922707, 1.8226438923395447, 1.983};
-//
-//		double bin_m23[70] = {0.9793836006789989, 1.0324554847369698, 1.0726679162989667, 1.112127252852912, 1.163643214205569, 1.2041931175872116, 1.2536949050268251, 1.2936231497933306, 1.3162248808722359, 1.3348722172797893, 1.3548603294574668, 1.3706631451924565, 1.3864659609274461, 1.4060139526458726, 1.4314246810479057, 1.448758057200738, 1.4625855209688539, 1.4751119420638623, 1.487914557200738, 1.5095829122732018, 1.5234103760413178, 1.5359669919833467, 1.5470289629978395, 1.55980671179011, 1.5745560064761004, 1.592880726282864, 1.6071250670046595, 1.6225764702442165, 1.6497305185533953, 1.664788866379482, 1.68322548473697, 1.7031492396776815, 1.7198551327700962, 1.743970412273202, 1.7674981724840055, 1.7993335523698202, 1.8287895137224772, 1.8746176793539473, 1.9401125861862454, 2.017642296331173, 2.1079604122732025, 2.2499117166210283, 2.351579542707985, 2.385697182459537, 2.4205090499543616, 2.4434429243504967, 2.4680250821604806, 2.490217487372016, 2.510330161943821, 2.5319671111459883, 2.5508094435470388, 2.5624536235622943, 2.578748132958314, 2.598860807530119, 2.618377658650014, 2.6374004122732018, 2.6578282078490982, 2.669472387864354, 2.6829324654132987, 2.7010427129978396, 2.7148701767659555, 2.728697640534072, 2.7425251043021874, 2.7534551948818975, 2.7639904053718904, 2.785568302772397, 2.813880412273202, 2.83231703063069, 2.8979641803891454, 3.075083600678999};
-
 
 //		datapdf->printCovMat();
 		ProdPdf prodpdf{"prodpdf", {signal}};
@@ -1557,6 +1593,9 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 		dalitzplot->Scale(dalitzData->Integral()/dalitzplot->Integral());
 		dalitzplot->Draw("colz");
 
+		ChisqInfo* ChiSq = getAdaptiveChisquare(dalitzData, dalitzplot);
+		cout << "Chisquare: " <<  ChiSq->chisq << " / " << ChiSq->dof << endl;
+
 		int nonEmpty = 0;
 		double Chi2 = 0;
 ///*
@@ -1590,8 +1629,7 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 //*/
 
 
-//		ChisqInfo* ChiSq = getAdaptiveChisquare(dalitzData, dalitzplot);
-//		cout << "Chisquare: " <<  ChiSq->chisq << " / " << ChiSq->dof << endl;
+
 //		TH2F *pull = ChiSq->contribPlot;
 //		pull->GetXaxis()->SetTitle("M^{2}_{K^{+}#pi^{0}} (GeV^{2}/c^{4})");
 //		pull->GetYaxis()->SetTitle("M^{2}_{K_{S}^{0}#pi^{0}} (GeV^{2}/c^{4})");
@@ -1769,9 +1807,16 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 		double rms[num_res];
 		double errList[num_res];
 		vector <double> fractions[num_res];
+
+		const int num_in = (num_res*num_res-num_res)/2;
+		double mean_in[num_in];
+		double rms_in[num_in];
+		double errList_in[num_in];
+		vector <double> frac_in[num_in];
 	
-		for (int ii = 0; ii < num_res; ii++) mean[ii] = rms[ii] = 0;
-	
+		for (int ii = 0; ii < num_res; ii++) {mean[ii] = rms[ii] = 0;fractions[ii].clear();}
+		for (int ii = 0; ii < num_in; ii++) {mean_in[ii] = rms_in[ii] = 0;frac_in[ii].clear();}
+
 		fptype mean_rate = 0;
 		fptype rms_rate = 0;
 		vector <fptype> rate; rate.clear();
@@ -1789,14 +1834,22 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 			mean_rate += Tmp;
 			rms_rate += Tmp*Tmp;
 		
+			int n_in = 0;
 			for (int i = 0; i < fracListNew.size(); ++i){
 				for (int j = 0; j < fracListNew.size(); ++j){
 					//cout << fracListNew[i][j] << ",  ";
-					if(i == j){
+					if(i == j){//res frac
 						fractions[i].push_back(fracListNew[i][j]);
 						mean[i] += fracListNew[i][j]; 
 						rms[i] += fracListNew[i][j]*fracListNew[i][j];
 					}
+					if(i < j){//interference
+						frac_in[n_in].push_back(fracListNew[i][j]);
+						mean_in[n_in] += fracListNew[i][j]; 
+						rms_in[n_in] += fracListNew[i][j]*fracListNew[i][j];
+						++n_in;
+					}
+
 				}
 				//cout << endl;
 			}
@@ -1829,8 +1882,38 @@ double runDataFit(Amp3Body *signal, UnbinnedDataSet *data, bool m_err) {
 	
 		fptype fraction_rate = (fracList[0]/0.333) / (fracList[1]/0.3323/0.5);
 		fptype fraction_rate_err = hRate->GetRMS();
-	
 		froot->Close();
+
+		//for interference
+		TH1F* hFracs_in[num_in];
+		TFile * froot_in = new TFile("plots/interferenceHists.root", "recreate");
+	
+		for (int ii = 0; ii < num_in; ii++) {
+			mean_in[ii] /= nSamples;
+			rms_in[ii] = sqrt(rms_in[ii]/nSamples-mean_in[ii]*mean_in[ii]);
+			sprintf(strbuffer, "hfrac_interference_%d", ii);
+			hFracs_in[ii] = new TH1F(strbuffer, "", 100, mean_in[ii]-4*rms_in[ii], mean_in[ii]+4*rms_in[ii]);
+	
+			for (int jj = 0; jj < nSamples; jj++)
+				hFracs_in[ii]->Fill(frac_in[ii][jj]);
+			hFracs_in[ii]->Write();
+			errList_in[ii] = hFracs_in[ii]->GetRMS();//gaus1->GetParameter(2);
+		}
+
+		//output print
+		std::cout << std::endl;
+		std::cout<<"Statistical errors:"<<std::endl;
+		int n_in = 0;
+		for (int ii=0;ii<num_res;ii++){
+			for (int jj=0;jj<num_res;jj++){
+				if(ii==jj) std::cout << errList[ii] << ",  ";
+				if(ii<jj) {std::cout << errList_in[n_in] << ",  "; ++n_in;}
+				if(ii>jj) std::cout << "          ,  ";
+			}
+			std::cout << std::endl;
+		}
+		froot_in->Close();
+
 		std::cout << std::endl;
 		for (int ii=0;ii<num_res;ii++) 
 			std::cout<<"Fit fraction for #"<<ii<<": "<<fracList[ii]<< " +- "<<errList[ii]<<std::endl;
@@ -2191,7 +2274,7 @@ if(m_fit_data){
 
 	if(m_float_init){
 		init_val.clear();
-		for (int j = 0; j < 30; ++j)
+		for (int j = 0; j < 35; ++j)
 			init_val.push_back(fRand(-5,5));
 
 		Amp3Body *signal = makeSignalPdf(m12, m13, eventNumber, init_val, 0, eff, false);
