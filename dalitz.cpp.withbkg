@@ -73,6 +73,7 @@ bool m_float_polyeff = false;
 
 bool m_draw_polyeff = false;
 bool m_draw_smootheff = false;
+bool m_draw_Bkg = true;
 
 bool m_test_pdf = false;
 bool m_fit_data = true;
@@ -598,8 +599,6 @@ GooPdf* makeHistogramPdf(UnbinnedDataSet &data, string filename = "", string his
 	m13.setNumBins(oldBins2);
 
 	f->Close();
-	if(m_draw_smootheff)
-		makeEffPlot(ret,&data);
  	cout << "end generate efficiency pdf" << endl;
 
 	return ret; 
@@ -761,16 +760,15 @@ void makeEffPlot(GooPdf* total, UnbinnedDataSet* data){
 	Observable m13         = obs.at(1);
 	Observable eventNumber = obs.at(2);
 
+	TFile *f = TFile::Open("bkg_cocktailMC_tmp2.root");
+	TH1D *m12_data = (TH1D *) f->Get("th1d_m12");
+	TH1D *m13_data = (TH1D *) f->Get("th1d_m13");
+	TH2D *effplot = (TH2D *) f->Get("th2d_bkg");
+
 	int oldBins1 = m12.getNumBins();
 	int oldBins2 = m13.getNumBins();
-	m12.setNumBins(drawBinM12);
-	m13.setNumBins(drawBinM13);
-
-
-//	ProdPdf prodpdf{"effpdf", {total}};
-//	DalitzPlotter plotter(&prodpdf, (Amp3Body *)total);
-//	UnbinnedDataSet toyMC({m12, m13, eventNumber});
-//	plotter.fillDataSetMC(toyMC, 5000000);
+	m12.setNumBins(m12_data->GetNbinsX());
+	m13.setNumBins(m13_data->GetNbinsX());
 
 	//prepare drawing hist
 	TH1::SetDefaultSumw2(1);
@@ -796,100 +794,12 @@ void makeEffPlot(GooPdf* total, UnbinnedDataSet* data){
 	m13_pdf_hist.SetLineWidth(2); 
 
 	TH1F m23_pdf_hist("m23_pdf_hist", "", m12.getNumBins(), getM23LowerLimit(m12,m13), getM23UpperLimit(m12,m13));
-//	TH1F m23_pdf_hist("m23_pdf_hist", "", m12.getNumBins(), m23_lower, m23_upper);
 	m23_pdf_hist.SetStats(false); 
 	m23_pdf_hist.SetLineColor(kRed); 
 	m23_pdf_hist.SetLineWidth(2); 
 
-	TH2F *effplot = new TH2F("effplot",
-                    "",
-                    m12.getNumBins(),
-                    m12.getLowerLimit(),
-                    m12.getUpperLimit(),
-                    m13.getNumBins(),
-                    m13.getLowerLimit(),
-                    m13.getUpperLimit());
-	effplot->GetXaxis()->SetTitle("M^{2}(K^{+}#pi^{0}) (GeV^{2}/c^{4})");
-	effplot->GetYaxis()->SetTitle("M^{2}(K_{S}^{0}#pi^{0}) (GeV^{2}/c^{4})");
 
 
-	TH1F *m12_data = new TH1F("m12_data","", m12.getNumBins(), m12.getLowerLimit(), m12.getUpperLimit());
-	m12_data->SetMarkerStyle(20);
-	m12_data->SetMarkerSize(0.6);
-	m12_data->SetLineWidth(2);
-	m12_data->GetYaxis()->SetTitle("Efficiency");
-	m12_data->GetXaxis()->SetTitle("M^{2}(K^{+}#pi^{0}) (GeV^{2}/c^{4})");
-	m12_data->SetLineColor(1);
-	
-	TH1F *m13_data = new TH1F("m13_data","", m13.getNumBins(), m13.getLowerLimit(), m13.getUpperLimit());
-	m13_data->SetMarkerStyle(20);
-	m13_data->SetMarkerSize(0.6);
-	m13_data->SetLineWidth(2);
-	m13_data->GetYaxis()->SetTitle("Efficiency");
-	m13_data->GetXaxis()->SetTitle("M^{2}(K_{S}^{0}#pi^{0}) (GeV^{2}/c^{4})");
-	m13_data->SetLineColor(1);
-	
-	TH1F *m23_data = new TH1F("m23_data","", m12.getNumBins(), getM23LowerLimit(m12,m13), getM23UpperLimit(m12,m13));
-//	TH1F *m23_data = new TH1F("m23_data","", m12.getNumBins(), m23_lower, m23_upper);
-	m23_data->SetMarkerStyle(20);
-	m23_data->SetMarkerSize(0.6);
-	m23_data->SetLineWidth(2);
-	m23_data->GetYaxis()->SetTitle("Efficiency");
-	m23_data->GetXaxis()->SetTitle("M^{2}(K^{+}K_{S}^{0}) (GeV^{2}/c^{4})");
-	m23_data->SetLineColor(1);
-
-
-//	TChain *tr_data = new TChain("DTag");tr_data->Add(eff_filename.c_str());
-//	tr_data->Project("m12_data","m_Kppi0_sq");
-//	tr_data->Project("m13_data","m_Kspi0_sq");
-//	tr_data->Project("m23_data","m_KpKs_sq");
-//	tr_data->Draw("m_Kspi0_sq:m_Kppi0_sq>>effplot");
-
-	TFile *f = TFile::Open(eff_filename.c_str());
-	TTree *t = (TTree *)f->Get("DTag");
-	assert(t);
-	fptype m_Kppi0_sq, m_Kspi0_sq, m_KpKs_sq, m_recoil, dE_sig;
-	t->SetBranchAddress("m_Kppi0_sq",&m_Kppi0_sq);
-	t->SetBranchAddress("m_Kspi0_sq",&m_Kspi0_sq);
-	t->SetBranchAddress("m_KpKs_sq",&m_KpKs_sq);
-	t->SetBranchAddress("m_recoil",&m_recoil);
-	t->SetBranchAddress("dE_sig",&dE_sig);
-
-	for(int i = 0; i < t->GetEntries(); i++){
-		t->GetEvent(i);
-		if(m_recoil<1.8648||m_recoil>1.8772) continue;
-		if(dE_sig<-0.03||dE_sig>0.02) continue;
-		if(!cpuDalitz(m_Kppi0_sq,m_Kspi0_sq)) continue;
-		m12_data->Fill(m_Kppi0_sq);
-		m13_data->Fill(m_Kspi0_sq);
-		m23_data->Fill(m_KpKs_sq);
-		effplot->Fill(m_Kppi0_sq,m_Kspi0_sq);
-	}
-	f->Close();
-
-
-//     TRandom3 rr;
-//     rr.SetSeed(233333);
-//
-//     int idx = effplot->GetXaxis()->GetNbins();
-//     double xstep = (effplot->GetXaxis()->GetXmax()-effplot->GetXaxis()->GetXmin())/(double)idx;
-//     int idy = effplot->GetYaxis()->GetNbins();
-//     double ystep = (effplot->GetYaxis()->GetXmax()-effplot->GetYaxis()->GetXmin())/(double)idy;
-//
-//     double xleft, xright, ydown, yup;
-//     double weight = 1;
-//     for (int ix = 0; ix < idx; ++ix){
-//          for (int iy = 0; iy < idy; ++iy){
-//               weight = 1;
-//               xleft = effplot->GetXaxis()->GetXmin() + ix*xstep;
-//               xright = effplot->GetXaxis()->GetXmin() + (ix+1)*xstep;
-//               ydown = effplot->GetYaxis()->GetXmin() + iy*ystep;
-//               yup = effplot->GetYaxis()->GetXmin() + (iy+1)*ystep;
-//               weight = calWeight(xleft,xright,ydown,yup,rr);
-//
-//               effplot->SetBinContent(ix+1,iy+1,weight*effplot->GetBinContent(ix+1,iy+1));
-//          }
-//     }
 
 	double totalPdf = 0; 
 	double totalDat = 0; 
@@ -936,14 +846,12 @@ void makeEffPlot(GooPdf* total, UnbinnedDataSet* data){
 	foo->Divide(2,2);
 
 	foo->cd(3);
-	m12_data->Draw("P");
+	m12_data->Draw("e");
 	m12_pdf_hist.Scale(m12_data->Integral()/m12_pdf_hist.Integral());
 	for (unsigned int j = 0; j < pdfValues[0].size(); ++j)
 		m12_pdf_hist.SetBinError(j,0);
 
 	m12_pdf_hist.Draw("sameL");
-	m12_data->Rebin(2);
-	m12_pdf_hist.Rebin(2);
 
 	foo->cd(4);
 	m13_data->Draw("P");
@@ -952,18 +860,8 @@ void makeEffPlot(GooPdf* total, UnbinnedDataSet* data){
 		m13_pdf_hist.SetBinError(j,0);
 
 	m13_pdf_hist.Draw("sameL");
-	m13_data->Rebin(2);
-	m13_pdf_hist.Rebin(2);
-
-//	foo->cd(4);
-//	m23_data->Draw("P");
-//	m23_pdf_hist.Scale(m23_data->Integral()/m23_pdf_hist.Integral());
-//	for (unsigned int j = 0; j < pdfValues[0].size(); ++j)
-//		m23_pdf_hist.SetBinError(j,0);
-//
-//	m23_pdf_hist.Draw("sameL");
-//	m23_data->Rebin(10);
-//	m23_pdf_hist.Rebin(10);
+//	m13_data->Rebin(2);
+//	m13_pdf_hist.Rebin(2);
 
 
 	TCanvas *foo2 = new TCanvas("c2","c2",700,600);
@@ -975,9 +873,9 @@ void makeEffPlot(GooPdf* total, UnbinnedDataSet* data){
 	pull->GetXaxis()->SetTitle("M^{2}(K^{+}#pi^{0}) (GeV^{2}/c^{4})");
 	pull->GetYaxis()->SetTitle("M^{2}(K_{S}^{0}#pi^{0}) (GeV^{2}/c^{4})");
 
-	effplot->Rebin2D(2,2);
-	effpdfplot->Rebin2D(2,2);
-	pull->Rebin2D(2,2);
+//	effplot->Rebin2D(2,2);
+//	effpdfplot->Rebin2D(2,2);
+//	pull->Rebin2D(2,2);
 
 	int nonEmpty = 0;
 	double Chi2 = 0;
@@ -1003,13 +901,9 @@ void makeEffPlot(GooPdf* total, UnbinnedDataSet* data){
 
 	foo->cd(2);
 	effpdfplot->Draw("colz");
-	if(m_draw_polyeff){
-		foo2->SaveAs("plots/eff_pull.C");
-		foo->SaveAs("plots/eff_fit_plot.C");
-	}
-	if(m_draw_smootheff){
-		foo2->SaveAs("plots/smootheff_pull.C");
-		foo->SaveAs("plots/smootheff_plot.C");
+	if(m_draw_Bkg){
+		foo2->SaveAs("plots/smoothBkg_pull.C");
+		foo->SaveAs("plots/smoothBkg_plot.C");
 	}
 
 	m12.setNumBins(oldBins1);
@@ -1083,8 +977,6 @@ GooPdf* fitEffPoly(UnbinnedDataSet &data){
 	cout << endl;
 	cout << "NLL = " << endl << nll << endl;
 
-	if(m_draw_polyeff)
-		makeEffPlot(eff,&data);
 	return eff;
 }
 
@@ -1560,13 +1452,17 @@ GooPdf* makeBkgPdf(UnbinnedDataSet &data, string filename = "", string histname 
 		binEffData->setBinContent(i, content);
 	}
 
-	SmoothHistogramPdf* ret = new SmoothHistogramPdf(pdfname.c_str(), binEffData, Variable("smoothConst2", 10));
+	SmoothHistogramPdf* ret = new SmoothHistogramPdf(pdfname.c_str(), binEffData, Variable("smoothConst2", 1000));
 
 	m12.setNumBins(oldBins1);
 	m13.setNumBins(oldBins2);
 
 	f->Close();
  	cout << "end generate bkg efficiency pdf" << endl;
+
+	if(m_draw_Bkg)
+		makeEffPlot(ret,&data);
+
 	return ret; 
 }
 
@@ -1656,7 +1552,7 @@ int main(int argc, char **argv) {
 	else
 		signal = makeSignalPdf(m12, m13, eventNumber, init_val, 0, 0, false);
 
-	GooPdf *bkg = makeBkgPdf(data, "bkg_cocktailMC_bin150.root", "th2d_bkg", "bkg");
+	GooPdf *bkg = makeBkgPdf(data, "bkg_cocktailMC_tmp2.root", "th2d_bkg", "bkg");
 
 	runDataFit(signal, bkg, &data, true);
 	return 1;
