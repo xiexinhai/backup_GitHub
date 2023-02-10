@@ -9,7 +9,7 @@ import datetime
 import math
 import json
 
-deltaT = 5.0
+deltaT = 1.0
 
 Bchx = 1 # LR coil
 Bchy = 0 # UD coil
