@@ -1,0 +1,6 @@
+Before using the macros of the compensation system,
+suggest to firstly run the macro: sh fix_USBID_order.py,
+which will read the version ID for three power supplies and fix the order as:
+comm: Up-down coil
+comm2: Left-right coil
+comm3: Forward-backward coil
