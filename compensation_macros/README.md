@@ -9,7 +9,7 @@ The relevent macros can control the power supplies of three coils:
 Before using the macros of the compensation system,
 one need to firstly run the macro: 
 
-`sh fix_USBID_order.py`
+`python fix_USBID_order.py`
 
 which will read the version ID for three power supplies and fix the order into file, **USBID_order.json**, which contains a list, for example:
 
