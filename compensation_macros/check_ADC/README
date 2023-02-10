@@ -1,7 +1,0 @@
-The readout of ADC will can be saved into a .csv file
-by running the macro: sh save_ADC.sh,
-the saving frequence can be changed by changing the number in the .sh file, 
-for an example, '/bin/sleep 1' means the saving frequence is 1s for saving one time.
-
-The saving order in .csv file is:
-[System time, readout from ADC*[32]]
