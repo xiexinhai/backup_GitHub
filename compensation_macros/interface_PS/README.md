@@ -2,8 +2,8 @@
 
 **These macros are used for the control of the power supply**
 
-The macros interface_PS_A.py, interface_PS_B.py and interface_PS_C.py
-can control a single power supply with command line interface:
+The macros **interface_PS_A.py**, **interface_PS_B.py** and **interface_PS_C.py**
+can control a single power supply with command line interface.
 ```
     print('Welcome to the interface of the power supply!')
     print('Enter 1 to turn on the output.')
@@ -51,6 +51,10 @@ can control a single power supply with command line interface:
 The input values for voltage and current is currently limited as $U:[0,20]V$, and $I: [0,5]A$. The limit can be modified.
 
 
-The macro interface_PS_together.py 
-can control three power supplies together.
+The macro **interface_PS_together.py** can control three power supplies together. 
+
+The input values should be splitted with comma "," eg: `1.0,2.0,3.0`, which means change the output current values for three power supplies corresponding to UD, LR and FB coils to $1.0A$, $2.0A$ and $3.0A$ respectively.
+
+The limits are the same with previous single control macros.
+
 
