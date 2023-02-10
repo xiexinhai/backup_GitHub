@@ -3,7 +3,7 @@
 **These macros are used for monitor of the ADC readout**
 
 
-The ADC readout will can be saved into a .csv file **log_ADC.csv**, 
+The ADC readout can be saved into a .csv file **log_ADC.csv**, 
 by running the shell macro: 
 
 `sh save_ADC.sh`
@@ -16,7 +16,7 @@ python save_ADC.py
 /bin/sleep 1
 done
 ```
-It will run the python macro **save_ADC.py** in a time interval as 1 second, which is the saving frequency for ADC readout. 
+It will run the python macro **save_ADC.py** in a time interval as 1 second, which is the saving frequency for ADC readout. (Time interval can be changed.)
 
 The python macro **save_ADC.py** will obtain ADC readout and save the values as a list into the .csv file **log_ADC.csv**.
 ```
