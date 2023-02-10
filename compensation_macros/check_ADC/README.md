@@ -44,3 +44,7 @@ if __name__ == "__main__":
 
 The saving order in .csv file is:
 `[System time, readout from ADC*[32]]`
+
+If one just need to print out the readout once, one can run the macro:
+
+`python print_ADC.py`
