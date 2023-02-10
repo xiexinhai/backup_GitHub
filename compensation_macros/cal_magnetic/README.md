@@ -32,4 +32,4 @@ if __name__ == "__main__":
     c.set_xyz(0.0,0.0,0.0)
     print(c.magnetic3D())
 ```
-This will calculate the the generate magnetic field at the center $(0,0,0)$ with the current $I=1.0A$.
+This will calculate the the generate magnetic field at the center $(0,0,0)$ with the current $I=1.0A$. The output values are in the unit of Gs.
